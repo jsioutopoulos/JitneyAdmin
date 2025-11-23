@@ -28,8 +28,8 @@ export interface Trip {
   departureTime: Date;
   arrivalTime: Date;
   vehicleId: string | null;
-  driverId: string | null;
-  attendantId: string | null;
+  driverIds: string[];
+  attendantIds: string[];
   passengerCount: number;
   status: TripStatus;
   packId?: string; // Trip chain ID - Used for the "Trip" column display
@@ -80,8 +80,8 @@ const createTrip = (id: string, packId: string, route: string, vehicleId: string
   departureTime: addHours(today, 6 + Math.random() * 12),
   arrivalTime: addHours(today, 8 + Math.random() * 12),
   vehicleId,
-  driverId,
-  attendantId,
+  driverIds: driverId ? [driverId] : [],
+  attendantIds: attendantId ? [attendantId] : [],
   passengerCount: Math.floor(Math.random() * 40),
   status: "scheduled"
 });

@@ -97,10 +97,10 @@ export default function Lineup() {
 
 function LineupRow({ trip, onAssign }: { trip: Trip, onAssign: (id: string, field: any, value: string) => void }) {
   const vehicle = vehicles.find(v => v.id === trip.vehicleId);
-  const driver = crew.find(c => c.id === trip.driverId);
-  const attendant = crew.find(c => c.id === trip.attendantId);
+  const driver = crew.find(c => c.id === (trip.driverIds?.[0] || trip.driverId));
+  const attendant = crew.find(c => c.id === (trip.attendantIds?.[0] || trip.attendantId));
   
-  const isUnassigned = !trip.vehicleId || !trip.driverId;
+  const isUnassigned = !trip.vehicleId || !(trip.driverIds?.length > 0 || trip.driverId);
   
   return (
     <TableRow className={cn(
@@ -163,11 +163,11 @@ function LineupRow({ trip, onAssign }: { trip: Trip, onAssign: (id: string, fiel
       {/* Driver Selector */}
       <TableCell className="align-top py-3">
         <ResourceSelect 
-          value={trip.driverId} 
+          value={trip.driverIds?.[0] || ""} 
           options={crew.filter(c => c.role === 'driver')}
           placeholder="Select Driver..."
           icon={UserPlus}
-          onChange={(val: string) => onAssign(trip.id, 'driverId', val)}
+          onChange={(val: string) => onAssign(trip.id, 'driverIds', [val])}
           type="crew"
         />
       </TableCell>
@@ -175,11 +175,11 @@ function LineupRow({ trip, onAssign }: { trip: Trip, onAssign: (id: string, fiel
       {/* Attendant Selector */}
       <TableCell className="align-top py-3">
          <ResourceSelect 
-          value={trip.attendantId} 
+          value={trip.attendantIds?.[0] || ""} 
           options={crew.filter(c => c.role === 'attendant')}
           placeholder="Select Attendant..."
           icon={Users}
-          onChange={(val: string) => onAssign(trip.id, 'attendantId', val)}
+          onChange={(val: string) => onAssign(trip.id, 'attendantIds', [val])}
           type="crew"
         />
       </TableCell>
