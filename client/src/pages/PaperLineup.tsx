@@ -3,10 +3,19 @@ import { Layout } from "@/components/layout/Layout";
 import { trips, vehicles, crew, Trip, Crew, Vehicle } from "@/lib/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, History, ChevronRight, ChevronLeft } from "lucide-react";
+import { Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   DndContext,
   DragOverlay,
@@ -29,10 +38,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import mapBg from "@assets/generated_images/subtle_topological_map_background.png";
 
 // --- Types & Helpers ---
 
-type ResourceType = 'vehicle' | 'driver' | 'attendant';
+type ResourceType = 'vehicle' | 'driver' | 'attendant' | 'trip';
 
 interface DraggableData {
   type: ResourceType;
@@ -42,7 +58,7 @@ interface DraggableData {
 
 // --- Components ---
 
-const DraggableResource = ({ resource, type, compact = false }: { resource: Crew | Vehicle, type: ResourceType, compact?: boolean }) => {
+const DraggableResource = ({ resource, type, compact = false, onContextMenu }: { resource: Crew | Vehicle, type: ResourceType, compact?: boolean, onContextMenu?: (e: React.MouseEvent) => void }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `resource-${type}-${resource.id}`,
     data: { type, id: resource.id, data: resource } as DraggableData,
@@ -57,6 +73,7 @@ const DraggableResource = ({ resource, type, compact = false }: { resource: Crew
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onContextMenu={onContextMenu}
       className={cn(
         "flex items-center gap-2 p-2 rounded-md border border-border bg-card cursor-grab hover:border-primary/50 hover:shadow-sm transition-all select-none",
         isDragging && "opacity-50",
@@ -95,12 +112,13 @@ const DroppableCell = ({ id, children, accept, isOver }: { id: string, children:
 };
 
 // Multi-select Component for Drivers/Attendants
-const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon }: { 
+const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon, onResourceRightClick }: { 
   values: string[], 
   options: any[], 
   onChange: (ids: string[]) => void, 
   placeholder: string,
-  icon: any 
+  icon: any,
+  onResourceRightClick?: (id: string, type: ResourceType) => void
 }) => {
   const [open, setOpen] = useState(false);
   
@@ -126,12 +144,27 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
           ) : (
             <div className="flex flex-wrap gap-1 py-1">
               {selectedItems.map(item => (
-                <Badge key={item.id} variant="secondary" className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-destructive/10 hover:text-destructive transition-colors group/badge" onClick={(e) => {
-                  e.stopPropagation();
-                  toggleItem(item.id);
-                }}>
+                <Badge 
+                  key={item.id} 
+                  variant="secondary" 
+                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-context-menu transition-colors group/badge" 
+                  onContextMenu={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onResourceRightClick?.(item.id, item.role || 'driver'); // heuristic for role
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
                   {item.name}
-                  <X className="h-2 w-2 opacity-0 group-hover/badge:opacity-100 transition-opacity" />
+                  <X 
+                    className="h-2 w-2 opacity-0 group-hover/badge:opacity-100 transition-opacity hover:text-destructive cursor-pointer" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleItem(item.id);
+                    }}
+                  />
                 </Badge>
               ))}
               <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -166,7 +199,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
   );
 };
 
-const EditableText = ({ value, onChange, className }: { value: string, onChange: (val: string) => void, className?: string }) => {
+const EditableText = ({ value, onChange, className, onContextMenu }: { value: string, onChange: (val: string) => void, className?: string, onContextMenu?: (e: React.MouseEvent) => void }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
 
@@ -186,6 +219,7 @@ const EditableText = ({ value, onChange, className }: { value: string, onChange:
   return (
     <div 
       onClick={() => { setTempValue(value); setIsEditing(true); }}
+      onContextMenu={onContextMenu}
       className={cn("w-full h-full flex items-center justify-center cursor-text hover:bg-muted/20", className)}
     >
       {value}
@@ -198,6 +232,10 @@ export default function HybridLineup() {
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeDragItem, setActiveDragItem] = useState<DraggableData | null>(null);
+  
+  // Drawer State
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerContent, setDrawerContent] = useState<{ type: ResourceType, id: string } | null>(null);
 
   // DnD Handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -242,6 +280,13 @@ export default function HybridLineup() {
     setLocalTrips(prev => prev.map(t => t.id === tripId ? { ...t, [field]: value } : t));
   };
 
+  // Context Menu Handler
+  const handleContextMenu = (e: React.MouseEvent, type: ResourceType, id: string) => {
+    e.preventDefault();
+    setDrawerContent({ type, id });
+    setDrawerOpen(true);
+  };
+
   // Split trips logic
   const leftColTrips = localTrips.filter((_, i) => i % 2 === 0);
   const rightColTrips = localTrips.filter((_, i) => i % 2 !== 0);
@@ -251,16 +296,223 @@ export default function HybridLineup() {
     right: rightColTrips[i] || null
   }));
 
+  // Drawer Content Renderer
+  const renderDrawerContent = () => {
+    if (!drawerContent) return null;
+
+    if (drawerContent.type === 'vehicle') {
+      const v = vehicles.find(x => x.id === drawerContent.id);
+      if (!v) return null;
+      return (
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+              <Bus className="h-6 w-6 text-primary" />
+              {v.name}
+            </h2>
+            <Badge variant={v.status === 'active' ? 'default' : 'destructive'}>{v.status.toUpperCase()}</Badge>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+             <div className="p-3 bg-muted/20 rounded-lg">
+                <p className="text-xs text-muted-foreground uppercase font-bold">Capacity</p>
+                <p className="text-lg font-mono">{v.capacity} PAX</p>
+             </div>
+             <div className="p-3 bg-muted/20 rounded-lg">
+                <p className="text-xs text-muted-foreground uppercase font-bold">License Plate</p>
+                <p className="text-lg font-mono">{v.plate}</p>
+             </div>
+          </div>
+
+          <div className="h-48 rounded-lg border border-border overflow-hidden relative bg-muted/10">
+             <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${mapBg})`, backgroundSize: 'cover' }} />
+             <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2 text-primary drop-shadow-md">
+                   <MapPin className="h-8 w-8 fill-primary text-white" />
+                   <span className="text-xs font-bold bg-background/80 px-2 py-1 rounded-full backdrop-blur-sm">Current Location</span>
+                </div>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (drawerContent.type === 'driver' || drawerContent.type === 'attendant') {
+      const c = crew.find(x => x.id === drawerContent.id);
+      if (!c) return null;
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
+               {c.name.charAt(0)}
+             </div>
+             <div>
+               <h2 className="text-2xl font-bold tracking-tight">{c.name}</h2>
+               <p className="text-muted-foreground capitalize flex items-center gap-2">
+                 {c.role === 'driver' ? <User className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                 {c.role}
+               </p>
+             </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+             <div className="p-3 bg-muted/20 rounded-lg">
+                <p className="text-xs text-muted-foreground uppercase font-bold">Status</p>
+                <p className="text-lg font-medium capitalize">{c.status}</p>
+             </div>
+             <div className="p-3 bg-muted/20 rounded-lg">
+                <p className="text-xs text-muted-foreground uppercase font-bold">Phone</p>
+                <p className="text-lg font-mono">{c.phone}</p>
+             </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-bold uppercase text-muted-foreground">Today's Assignments</h3>
+            {localTrips.filter(t => 
+               (t.driverIds && t.driverIds.includes(c.id)) || 
+               (t.attendantIds && t.attendantIds.includes(c.id))
+            ).map(t => (
+               <div key={t.id} className="flex items-center gap-3 p-2 border border-border rounded-md bg-card">
+                  <Badge variant="outline">{t.packId || t.id}</Badge>
+                  <span className="text-sm font-medium">{t.route}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{format(t.departureTime, "HH:mm")}</span>
+               </div>
+            ))}
+            {localTrips.filter(t => 
+               (t.driverIds && t.driverIds.includes(c.id)) || 
+               (t.attendantIds && t.attendantIds.includes(c.id))
+            ).length === 0 && (
+              <p className="text-sm text-muted-foreground italic">No active assignments</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (drawerContent.type === 'trip') {
+      const t = localTrips.find(x => x.id === drawerContent.id);
+      if (!t) return null;
+      return (
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+               <Badge>{t.packId || t.id}</Badge>
+               <Badge variant="outline" className="capitalize">{t.status}</Badge>
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">{t.route}</h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="p-3 bg-muted/20 rounded-lg">
+                <p className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2"><Navigation className="h-3 w-3" /> Departure</p>
+                <p className="text-lg font-mono">{format(t.departureTime, "HH:mm")}</p>
+             </div>
+             <div className="p-3 bg-muted/20 rounded-lg">
+                <p className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2"><Check className="h-3 w-3" /> Arrival</p>
+                <p className="text-lg font-mono">{format(t.arrivalTime, "HH:mm")}</p>
+             </div>
+          </div>
+
+          <div className="h-48 rounded-lg border border-border overflow-hidden relative bg-muted/10">
+             <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${mapBg})`, backgroundSize: 'cover' }} />
+             {/* Mock Route Line */}
+             <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                <path d="M 40 100 Q 150 50 260 100" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" strokeDasharray="5,5" />
+                <circle cx="40" cy="100" r="4" fill="hsl(var(--primary))" />
+                <circle cx="260" cy="100" r="4" fill="hsl(var(--primary))" />
+             </svg>
+             <div className="absolute bottom-2 right-2 bg-background/90 px-2 py-1 rounded text-xs font-bold shadow-sm">
+                Live Traffic: Clear
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <Layout>
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
         <div className="h-full flex overflow-hidden">
           
-          {/* Main Content Area */}
+          {/* LEFT SIDEBAR - RESOURCES */}
+          {sidebarOpen && (
+            <div className="w-72 bg-background border-r border-border flex flex-col shadow-sm shrink-0 z-20">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h2 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Resources</h2>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSidebarOpen(false)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-6">
+                  <div>
+                    <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2 sticky top-0 bg-background py-1 z-10">
+                      <Bus className="h-3.5 w-3.5" /> Vehicles
+                    </h3>
+                    <div className="space-y-1">
+                      {vehicles.map(v => (
+                        <DraggableResource 
+                          key={v.id} 
+                          resource={v} 
+                          type="vehicle" 
+                          compact 
+                          onContextMenu={(e) => handleContextMenu(e, 'vehicle', v.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2 sticky top-0 bg-background py-1 z-10">
+                      <User className="h-3.5 w-3.5" /> Drivers
+                    </h3>
+                    <div className="space-y-1">
+                      {crew.filter(c => c.role === 'driver').map(c => (
+                        <DraggableResource 
+                          key={c.id} 
+                          resource={c} 
+                          type="driver" 
+                          compact 
+                          onContextMenu={(e) => handleContextMenu(e, 'driver', c.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2 sticky top-0 bg-background py-1 z-10">
+                      <Shield className="h-3.5 w-3.5" /> Attendants
+                    </h3>
+                    <div className="space-y-1">
+                      {crew.filter(c => c.role === 'attendant').map(c => (
+                        <DraggableResource 
+                          key={c.id} 
+                          resource={c} 
+                          type="attendant" 
+                          compact 
+                          onContextMenu={(e) => handleContextMenu(e, 'attendant', c.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* MAIN CONTENT AREA */}
           <div className="flex-1 flex flex-col bg-muted/10 min-w-0">
             {/* Toolbar */}
             <div className="bg-card border-b border-border p-4 flex justify-between items-center shadow-sm z-10 print:hidden shrink-0">
               <div className="flex items-center gap-3">
+                {!sidebarOpen && (
+                  <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="mr-2">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
                 <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm">
                   <Printer className="h-5 w-5" />
                 </div>
@@ -270,10 +522,6 @@ export default function HybridLineup() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                  {sidebarOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-                  {sidebarOpen ? "Hide Resources" : "Show Resources"}
-                </Button>
                 <Button variant="outline" size="sm" onClick={() => window.print()}>
                   Print Sheet
                 </Button>
@@ -321,7 +569,8 @@ export default function HybridLineup() {
                     {emptyRows.map((row, idx) => (
                         <div key={`L-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
                           {/* Trip ID / Time */}
-                          <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative">
+                          <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative cursor-context-menu"
+                               onContextMenu={(e) => row.left && handleContextMenu(e, 'trip', row.left.id)}>
                               {row.left && (
                                 <>
                                   <EditableText 
@@ -344,6 +593,7 @@ export default function HybridLineup() {
                                     onChange={(ids) => handleUpdateTrip(row.left!.id, 'vehicleId', ids[0] || null)}
                                     placeholder="Bus"
                                     icon={Bus}
+                                    onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
                                   />
                                 </DroppableCell>
                               )}
@@ -360,6 +610,7 @@ export default function HybridLineup() {
                                       onChange={(ids) => handleUpdateTrip(row.left!.id, 'driverIds', ids)}
                                       placeholder="Drivers"
                                       icon={User}
+                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -373,6 +624,7 @@ export default function HybridLineup() {
                                       onChange={(ids) => handleUpdateTrip(row.left!.id, 'attendantIds', ids)}
                                       placeholder="Attendants"
                                       icon={Shield}
+                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -392,7 +644,8 @@ export default function HybridLineup() {
                     {emptyRows.map((row, idx) => (
                         <div key={`R-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
                           {/* Trip ID / Time */}
-                          <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative">
+                          <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative cursor-context-menu"
+                               onContextMenu={(e) => row.right && handleContextMenu(e, 'trip', row.right.id)}>
                               {row.right && (
                                 <>
                                   <EditableText 
@@ -415,6 +668,7 @@ export default function HybridLineup() {
                                     onChange={(ids) => handleUpdateTrip(row.right!.id, 'vehicleId', ids[0] || null)}
                                     placeholder="Bus"
                                     icon={Bus}
+                                    onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
                                   />
                                 </DroppableCell>
                               )}
@@ -431,6 +685,7 @@ export default function HybridLineup() {
                                       onChange={(ids) => handleUpdateTrip(row.right!.id, 'driverIds', ids)}
                                       placeholder="Drivers"
                                       icon={User}
+                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -444,6 +699,7 @@ export default function HybridLineup() {
                                       onChange={(ids) => handleUpdateTrip(row.right!.id, 'attendantIds', ids)}
                                       placeholder="Attendants"
                                       icon={Shield}
+                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -466,50 +722,17 @@ export default function HybridLineup() {
             </div>
           </div>
 
-          {/* Drag Source Sidebar */}
-          {sidebarOpen && (
-            <div className="w-64 bg-background border-l border-border flex flex-col shadow-lg shrink-0 z-20">
-              <div className="p-4 border-b border-border">
-                <h2 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Resources</h2>
-              </div>
-              <div className="flex-1 overflow-auto p-4 space-y-6">
-                
-                <div>
-                  <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2">
-                    <Bus className="h-3.5 w-3.5" /> Vehicles
-                  </h3>
-                  <div className="space-y-1">
-                    {vehicles.map(v => (
-                      <DraggableResource key={v.id} resource={v} type="vehicle" compact />
-                    ))}
-                  </div>
-                </div>
+          {/* RIGHT DRAWER - DETAILS */}
+          <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+            <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto p-6">
+              <SheetHeader className="mb-6">
+                <SheetTitle>Resource Details</SheetTitle>
+                <SheetDescription>View and manage specific resource information.</SheetDescription>
+              </SheetHeader>
+              {renderDrawerContent()}
+            </SheetContent>
+          </Sheet>
 
-                <div>
-                  <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2">
-                    <User className="h-3.5 w-3.5" /> Drivers
-                  </h3>
-                  <div className="space-y-1">
-                    {crew.filter(c => c.role === 'driver').map(c => (
-                      <DraggableResource key={c.id} resource={c} type="driver" compact />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2">
-                    <Shield className="h-3.5 w-3.5" /> Attendants
-                  </h3>
-                  <div className="space-y-1">
-                    {crew.filter(c => c.role === 'attendant').map(c => (
-                      <DraggableResource key={c.id} resource={c} type="attendant" compact />
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
         </div>
 
         <DragOverlay>
