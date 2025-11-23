@@ -3,8 +3,9 @@ import { Layout } from "@/components/layout/Layout";
 import { trips, vehicles, crew, Trip } from "@/lib/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Printer, Check, ChevronsUpDown, Search } from "lucide-react";
+import { Printer, Check, ChevronsUpDown, Search, Bus, User, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandEmpty,
@@ -28,9 +29,10 @@ interface PaperSelectProps {
   placeholder?: string;
   className?: string;
   align?: "left" | "center" | "right";
+  icon?: any;
 }
 
-const PaperSelect = ({ value, options, onChange, placeholder, className, align = "left" }: PaperSelectProps) => {
+const PaperSelect = ({ value, options, onChange, placeholder, className, align = "left", icon: Icon }: PaperSelectProps) => {
   const [open, setOpen] = useState(false);
   const selected = options.find((item) => item.id === value);
 
@@ -41,28 +43,34 @@ const PaperSelect = ({ value, options, onChange, placeholder, className, align =
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full h-full flex items-center cursor-pointer hover:bg-blue-50/30 transition-colors px-1 min-h-[24px]",
+            "w-full h-full flex items-center cursor-pointer hover:bg-muted/50 transition-colors px-2 min-h-[32px] rounded-sm group",
             align === "center" && "justify-center",
             align === "right" && "justify-end",
             align === "left" && "justify-start",
-            !value && "opacity-50",
+            !value && "opacity-60",
             className
           )}
         >
           {value ? (
-             <span className="font-handwriting text-blue-800 text-xl leading-none truncate">
-               {selected?.name || value}
-             </span>
+             <div className="flex items-center gap-2 truncate w-full">
+               {Icon && <Icon className="h-3.5 w-3.5 text-primary/70" />}
+               <span className="font-medium text-sm text-foreground truncate">
+                 {selected?.name || value}
+               </span>
+               {selected?.status === 'active' && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-auto" />}
+               {selected?.status === 'maintenance' && <AlertCircle className="h-3.5 w-3.5 text-destructive ml-auto" />}
+             </div>
           ) : (
-             <span className="font-handwriting text-slate-300 text-lg leading-none opacity-0 hover:opacity-100">
+             <span className="text-sm text-muted-foreground/70 font-medium flex items-center gap-2 truncate">
+               {Icon && <Icon className="h-3.5 w-3.5 opacity-50" />}
                {placeholder || "Select..."}
              </span>
           )}
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0 font-sans">
+      <PopoverContent className="w-[220px] p-0 font-sans shadow-lg border-border">
         <Command>
-          <CommandInput placeholder={`Search ${placeholder?.toLowerCase() || "..."}`} />
+          <CommandInput placeholder={`Search ${placeholder?.toLowerCase() || "..."}`} className="h-9" />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
@@ -74,6 +82,7 @@ const PaperSelect = ({ value, options, onChange, placeholder, className, align =
                     onChange(item.id);
                     setOpen(false);
                   }}
+                  className="text-sm"
                 >
                   <Check
                     className={cn(
@@ -81,9 +90,14 @@ const PaperSelect = ({ value, options, onChange, placeholder, className, align =
                       value === item.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <div className="flex flex-col">
-                    <span>{item.name}</span>
-                    {item.type && <span className="text-[10px] text-muted-foreground">{item.type}</span>}
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium">{item.name}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {item.type && <Badge variant="secondary" className="text-[10px] h-4 px-1 font-normal text-muted-foreground">{item.type}</Badge>}
+                      {item.status && item.status !== 'active' && item.status !== 'available' && (
+                        <span className="text-[10px] text-destructive font-medium uppercase">{item.status}</span>
+                      )}
+                    </div>
                   </div>
                 </CommandItem>
               ))}
@@ -95,9 +109,9 @@ const PaperSelect = ({ value, options, onChange, placeholder, className, align =
   );
 };
 
-const PaperCell = ({ children, className, noBorderRight }: any) => (
+const HybridCell = ({ children, className, noBorderRight }: any) => (
   <div className={cn(
-    "border-r border-b border-black px-1 py-0.5 flex items-center overflow-hidden bg-white relative",
+    "border-r border-b border-border px-1 py-1 flex items-center overflow-hidden bg-card relative transition-colors hover:bg-muted/30",
     noBorderRight && "border-r-0",
     className
   )}>
@@ -105,16 +119,16 @@ const PaperCell = ({ children, className, noBorderRight }: any) => (
   </div>
 );
 
-const PaperHeader = ({ children, width, className }: any) => (
+const HybridHeader = ({ children, width, className }: any) => (
   <div className={cn(
-    "border-r border-b border-black bg-slate-200 text-black font-bold text-xs uppercase text-center py-1 flex items-center justify-center tracking-tight select-none",
+    "border-r border-b border-border bg-muted/50 text-muted-foreground font-semibold text-xs uppercase text-center py-2 flex items-center justify-center tracking-wider select-none",
     className
   )} style={{ width }}>
     {children}
   </div>
 );
 
-export default function PaperLineup() {
+export default function HybridLineup() {
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
 
   const handleAssign = (tripId: string, field: keyof Trip, value: string) => {
@@ -135,175 +149,185 @@ export default function PaperLineup() {
 
   return (
     <Layout>
-      <div className="h-full flex flex-col bg-slate-100">
+      <div className="h-full flex flex-col bg-muted/10">
         {/* Toolbar */}
-        <div className="bg-white border-b border-border p-4 flex justify-between items-center shadow-sm z-10 print:hidden">
-           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-             <div className="bg-black text-white p-1 rounded-sm">
+        <div className="bg-card border-b border-border p-4 flex justify-between items-center shadow-sm z-10 print:hidden">
+           <div className="flex items-center gap-3">
+             <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm">
                <Printer className="h-5 w-5" />
              </div>
-             Lineup Sheet
-           </h1>
-           <div className="flex gap-2">
-             <div className="text-sm text-muted-foreground mr-4 flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-blue-800"></span>
-                <span>Click handwritten areas to edit</span>
+             <div>
+               <h1 className="text-lg font-bold text-foreground leading-none">Digital Lineup Grid</h1>
+               <p className="text-xs text-muted-foreground mt-1">Hybrid View • Monday, Nov 24</p>
              </div>
+           </div>
+           <div className="flex gap-2">
              <Button variant="outline" size="sm" onClick={() => window.print()}>
                Print Sheet
              </Button>
+             <Button size="sm">Save Changes</Button>
            </div>
         </div>
 
         <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible">
-          {/* The Paper Sheet */}
-          <div className="bg-white w-[1100px] min-h-[800px] shadow-2xl border border-slate-300 relative text-black font-sans text-sm print:shadow-none print:border-none print:w-full">
+          {/* The "Paper" Sheet - Now Digitized */}
+          <div className="bg-card w-[1200px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden">
             
-            {/* Paper Header */}
-            <div className="border-b-2 border-black p-2 flex justify-between items-end h-24">
-               <div className="border-2 border-black p-2 w-32 text-center transform -rotate-1">
-                  <div className="text-[10px] uppercase tracking-widest mb-4 border-b border-black/50">Day</div>
-                  <div className="font-handwriting text-3xl text-blue-900 font-bold">Monday</div>
+            {/* Header Section */}
+            <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5">
+               <div className="flex flex-col gap-1">
+                  <h1 className="text-2xl font-bold tracking-tight text-primary">HAMPTON JITNEY</h1>
+                  <h2 className="text-lg font-medium text-muted-foreground tracking-wide">DAILY OPERATIONS LINEUP</h2>
                </div>
 
-               <div className="text-center flex-1">
-                 <h1 className="text-3xl font-black uppercase tracking-widest scale-y-110 mb-2">Vehicle & Crew Assignments</h1>
-                 <div className="flex justify-center gap-8 text-sm font-bold uppercase">
-                    <div className="flex gap-2 items-end">
-                       <span>Date:</span>
-                       <span className="font-handwriting text-blue-900 text-xl border-b border-dotted border-black w-32 text-center">Nov 24, 2025</span>
-                    </div>
-                    <div className="flex gap-2 items-end">
-                       <span>Weather:</span>
-                       <span className="font-handwriting text-blue-900 text-xl border-b border-dotted border-black w-32 text-center">Sunny 65°</span>
-                    </div>
-                 </div>
-               </div>
-
-               <div className="w-32 border border-black h-full p-1 text-[10px]">
-                  <div className="border-b border-black mb-1">RESERVED:</div>
-                  <div className="border-b border-black mb-1">O.O.S:</div>
+               <div className="flex gap-8">
+                  <div className="flex flex-col items-end">
+                     <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Date</span>
+                     <span className="text-lg font-medium tabular-nums">Nov 24, 2025</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                     <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Day</span>
+                     <span className="text-lg font-medium">Monday</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                     <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Weather</span>
+                     <span className="text-lg font-medium flex items-center gap-1">Sunny 65°</span>
+                  </div>
                </div>
             </div>
 
             {/* Main Grid Container */}
-            <div className="flex border-b-2 border-black">
+            <div className="flex border-b border-border bg-card">
                {/* Left Column Group */}
-               <div className="flex-1 border-r-2 border-black">
-                  <div className="flex border-b-2 border-black h-8">
-                     <PaperHeader width="15%">Trip</PaperHeader>
-                     <PaperHeader width="15%">Vehicle</PaperHeader>
-                     <PaperHeader width="70%" className="border-r-0">Crew</PaperHeader>
+               <div className="flex-1 border-r border-border">
+                  <div className="flex border-b border-border h-9 bg-muted/30">
+                     <HybridHeader width="15%">Trip</HybridHeader>
+                     <HybridHeader width="20%">Vehicle</HybridHeader>
+                     <HybridHeader width="65%" className="border-r-0">Crew Assignment</HybridHeader>
                   </div>
                   {emptyRows.map((row, idx) => (
-                     <div key={`L-${idx}`} className="flex h-10 border-b border-black last:border-b-0 group">
-                        <PaperCell className="w-[15%] font-bold text-center bg-slate-50 text-xs group-hover:bg-blue-50/10 transition-colors">
-                           {row.left ? row.left.packId || row.left.id.toUpperCase() : ""}
-                        </PaperCell>
+                     <div key={`L-${idx}`} className="flex h-12 border-b border-border last:border-b-0 group hover:bg-muted/20 transition-colors">
+                        <HybridCell className="w-[15%] justify-center bg-muted/5 group-hover:bg-muted/10">
+                           {row.left && (
+                             <div className="flex flex-col items-center">
+                               <span className="font-bold text-xs text-primary">{row.left.packId || row.left.id.toUpperCase()}</span>
+                               <span className="text-[10px] text-muted-foreground">{format(row.left.departureTime, "HH:mm")}</span>
+                             </div>
+                           )}
+                        </HybridCell>
                         
-                        <PaperCell className="w-[15%] text-center font-bold bg-slate-50 group-hover:bg-blue-50/10 transition-colors">
+                        <HybridCell className="w-[20%] justify-center p-0">
                            {row.left && (
                              <PaperSelect 
                                value={row.left.vehicleId}
-                               options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1], type: v.type }))}
+                               options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1], type: v.type, status: v.status }))}
                                onChange={(val) => handleAssign(row.left!.id, 'vehicleId', val)}
                                align="center"
-                               placeholder="#"
+                               placeholder="Select Bus"
+                               icon={Bus}
                              />
                            )}
-                        </PaperCell>
+                        </HybridCell>
                         
-                        <PaperCell className="w-[70%] border-r-0 relative group-hover:bg-blue-50/10 transition-colors" noBorderRight>
+                        <HybridCell className="w-[65%] border-r-0 p-0" noBorderRight>
                            {row.left && (
-                             <div className="flex w-full items-center">
-                               <div className="flex-1">
+                             <div className="flex w-full h-full items-center divide-x divide-border/50">
+                               <div className="flex-1 h-full p-1">
                                  <PaperSelect 
                                    value={row.left.driverId}
                                    options={crew.filter(c => c.role === 'driver')}
                                    onChange={(val) => handleAssign(row.left!.id, 'driverId', val)}
-                                   placeholder="Driver"
+                                   placeholder="Assign Driver"
+                                   icon={User}
                                  />
                                </div>
-                               <div className="text-black/20 mx-1 select-none">/</div>
-                               <div className="flex-1">
+                               <div className="flex-1 h-full p-1">
                                  <PaperSelect 
                                    value={row.left.attendantId}
                                    options={crew.filter(c => c.role === 'attendant')}
                                    onChange={(val) => handleAssign(row.left!.id, 'attendantId', val)}
-                                   placeholder="Attendant"
+                                   placeholder="Assign Attendant"
+                                   icon={Shield}
                                  />
                                </div>
                              </div>
                            )}
-                        </PaperCell>
+                        </HybridCell>
                      </div>
                   ))}
                </div>
 
                {/* Right Column Group */}
                <div className="flex-1">
-                  <div className="flex border-b-2 border-black h-8">
-                     <PaperHeader width="15%">Trip</PaperHeader>
-                     <PaperHeader width="15%">Vehicle</PaperHeader>
-                     <PaperHeader width="70%" className="border-r-0">Crew</PaperHeader>
+                  <div className="flex border-b border-border h-9 bg-muted/30">
+                     <HybridHeader width="15%">Trip</HybridHeader>
+                     <HybridHeader width="20%">Vehicle</HybridHeader>
+                     <HybridHeader width="65%" className="border-r-0">Crew Assignment</HybridHeader>
                   </div>
                   {emptyRows.map((row, idx) => (
-                     <div key={`R-${idx}`} className="flex h-10 border-b border-black last:border-b-0 group">
-                        <PaperCell className="w-[15%] font-bold text-center bg-slate-50 text-xs group-hover:bg-blue-50/10 transition-colors">
-                           {row.right ? row.right.packId || row.right.id.toUpperCase() : ""}
-                        </PaperCell>
+                     <div key={`R-${idx}`} className="flex h-12 border-b border-border last:border-b-0 group hover:bg-muted/20 transition-colors">
+                        <HybridCell className="w-[15%] justify-center bg-muted/5 group-hover:bg-muted/10">
+                           {row.right && (
+                             <div className="flex flex-col items-center">
+                               <span className="font-bold text-xs text-primary">{row.right.packId || row.right.id.toUpperCase()}</span>
+                               <span className="text-[10px] text-muted-foreground">{format(row.right.departureTime, "HH:mm")}</span>
+                             </div>
+                           )}
+                        </HybridCell>
                         
-                        <PaperCell className="w-[15%] text-center font-bold bg-slate-50 group-hover:bg-blue-50/10 transition-colors">
+                        <HybridCell className="w-[20%] justify-center p-0">
                            {row.right && (
                              <PaperSelect 
                                value={row.right.vehicleId}
-                               options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1], type: v.type }))}
+                               options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1], type: v.type, status: v.status }))}
                                onChange={(val) => handleAssign(row.right!.id, 'vehicleId', val)}
                                align="center"
-                               placeholder="#"
+                               placeholder="Select Bus"
+                               icon={Bus}
                              />
                            )}
-                        </PaperCell>
+                        </HybridCell>
                         
-                        <PaperCell className="w-[70%] border-r-0 relative group-hover:bg-blue-50/10 transition-colors" noBorderRight>
+                        <HybridCell className="w-[65%] border-r-0 p-0" noBorderRight>
                            {row.right && (
-                             <div className="flex w-full items-center">
-                               <div className="flex-1">
+                             <div className="flex w-full h-full items-center divide-x divide-border/50">
+                               <div className="flex-1 h-full p-1">
                                  <PaperSelect 
                                    value={row.right.driverId}
                                    options={crew.filter(c => c.role === 'driver')}
                                    onChange={(val) => handleAssign(row.right!.id, 'driverId', val)}
-                                   placeholder="Driver"
+                                   placeholder="Assign Driver"
+                                   icon={User}
                                  />
                                </div>
-                               <div className="text-black/20 mx-1 select-none">/</div>
-                               <div className="flex-1">
+                               <div className="flex-1 h-full p-1">
                                  <PaperSelect 
                                    value={row.right.attendantId}
                                    options={crew.filter(c => c.role === 'attendant')}
                                    onChange={(val) => handleAssign(row.right!.id, 'attendantId', val)}
-                                   placeholder="Attendant"
+                                   placeholder="Assign Attendant"
+                                   icon={Shield}
                                  />
                                </div>
                              </div>
                            )}
-                        </PaperCell>
+                        </HybridCell>
                      </div>
                   ))}
                </div>
             </div>
 
             {/* Footer Sections */}
-            <div className="flex h-64">
+            <div className="flex h-64 bg-muted/5">
                {/* S.C.T Feeder Service */}
-               <div className="w-1/3 border-r-2 border-black p-0 flex flex-col">
-                  <div className="bg-slate-200 border-b border-black font-bold text-center py-1 uppercase text-xs border-r-0">
+               <div className="w-1/3 border-r border-border p-0 flex flex-col">
+                  <div className="bg-muted/50 border-b border-border font-bold text-center py-2 uppercase text-xs tracking-wider text-muted-foreground">
                      S.C.T Feeder Service
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 bg-card">
                     {[1,2,3,4,5].map(i => (
-                      <div key={i} className="flex h-8 border-b border-black">
-                        <div className="w-16 border-r border-black bg-slate-50"></div>
+                      <div key={i} className="flex h-10 border-b border-border">
+                        <div className="w-16 border-r border-border bg-muted/10"></div>
                         <div className="flex-1"></div>
                       </div>
                     ))}
@@ -312,21 +336,21 @@ export default function PaperLineup() {
 
                {/* Charters & Tours */}
                <div className="w-2/3 flex flex-col">
-                  <div className="bg-slate-200 border-b border-black font-bold text-center py-1 uppercase text-xs">
+                  <div className="bg-muted/50 border-b border-border font-bold text-center py-2 uppercase text-xs tracking-wider text-muted-foreground">
                      Charters & Tours
                   </div>
-                   <div className="flex border-b border-black bg-slate-100 text-[10px] font-bold h-6 items-center">
-                     <div className="w-24 border-r border-black text-center">Trip</div>
-                     <div className="w-24 border-r border-black text-center">Vehicle</div>
-                     <div className="flex-1 text-center">Details</div>
+                   <div className="flex border-b border-border bg-muted/30 text-[10px] font-semibold uppercase text-muted-foreground h-8 items-center">
+                     <div className="w-24 border-r border-border text-center">Trip</div>
+                     <div className="w-24 border-r border-border text-center">Vehicle</div>
+                     <div className="flex-1 pl-4">Details</div>
                   </div>
                   {[1,2,3,4,5].map(i => (
-                      <div key={i} className="flex h-8 border-b border-black">
-                        <div className="w-24 border-r border-black bg-slate-50 flex items-center justify-center text-xs font-bold">
+                      <div key={i} className="flex h-10 border-b border-border bg-card">
+                        <div className="w-24 border-r border-border bg-muted/5 flex items-center justify-center text-xs font-bold text-primary">
                            {i === 1 ? "STRATTON" : ""}
                         </div>
-                        <div className="w-24 border-r border-black bg-slate-50"></div>
-                        <div className="flex-1 font-handwriting text-blue-800 text-lg pl-2 pt-1">
+                        <div className="w-24 border-r border-border bg-muted/5"></div>
+                        <div className="flex-1 flex items-center pl-4 text-sm font-medium">
                            {i === 1 ? "JITNEY - HOWARD" : ""}
                         </div>
                       </div>
