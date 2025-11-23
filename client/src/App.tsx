@@ -8,11 +8,13 @@ import Dashboard from "@/pages/Dashboard";
 import Lineup from "@/pages/Lineup";
 import { useEffect } from "react";
 
+import PaperLineup from "@/pages/PaperLineup";
+
 function Router() {
   // Preload font to avoid flash
   useEffect(() => {
     const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap';
+    link.href = 'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Patrick+Hand&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
   }, []);
@@ -21,6 +23,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/lineup" component={Lineup} />
+      <Route path="/paper" component={PaperLineup} />
       
       {/* Placeholder routes for now */}
       <Route path="/vehicles" component={Dashboard} />
