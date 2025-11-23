@@ -21,9 +21,9 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/lineup" component={Lineup} />
-      <Route path="/paper" component={PaperLineup} />
+      <Route path="/" component={PaperLineup} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/digital-lineup" component={Lineup} />
       
       {/* Placeholder routes for now */}
       <Route path="/vehicles" component={Dashboard} />

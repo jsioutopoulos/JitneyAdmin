@@ -7,9 +7,9 @@ export function Sidebar() {
   const [location] = useLocation();
 
   const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-    { icon: CalendarDays, label: "Lineup", href: "/lineup" },
-    { icon: FileText, label: "Paper View", href: "/paper" },
+    { icon: FileText, label: "Lineup Sheet", href: "/" },
+    { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+    { icon: CalendarDays, label: "Digital Grid", href: "/digital-lineup" },
     { icon: Bus, label: "Vehicles", href: "/vehicles" },
     { icon: Users, label: "Crew", href: "/crew" },
     { icon: Map, label: "Live Map", href: "/map" },
