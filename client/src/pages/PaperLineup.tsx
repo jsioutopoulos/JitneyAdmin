@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -69,15 +70,15 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
   const status = resource.status;
 
   return (
-    <div
+    <Card
       ref={setNodeRef}
       {...listeners}
       {...attributes}
       onContextMenu={onContextMenu}
       className={cn(
-        "flex items-center gap-2 p-2 rounded-md border border-border bg-card cursor-grab hover:border-primary/50 hover:shadow-sm transition-all select-none",
+        "flex items-center gap-2 p-2 cursor-grab hover:border-primary/50 transition-all select-none",
         isDragging && "opacity-50",
-        compact ? "p-1.5 text-xs" : "mb-2"
+        compact ? "p-1.5 text-xs rounded-md mb-1" : "mb-2"
       )}
     >
       <GripVertical className="h-4 w-4 text-muted-foreground/50" />
@@ -88,7 +89,7 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
       {status !== 'active' && status !== 'available' && (
         <div className={cn("h-2 w-2 rounded-full", status === 'assigned' ? "bg-emerald-500" : "bg-amber-500")} />
       )}
-    </div>
+    </Card>
   );
 };
 
@@ -314,17 +315,17 @@ export default function HybridLineup() {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-             <div className="p-3 bg-muted/20 rounded-lg">
+             <Card className="p-3 bg-muted/20 border-none shadow-none">
                 <p className="text-xs text-muted-foreground uppercase font-bold">Capacity</p>
                 <p className="text-lg font-mono">{v.capacity} PAX</p>
-             </div>
-             <div className="p-3 bg-muted/20 rounded-lg">
+             </Card>
+             <Card className="p-3 bg-muted/20 border-none shadow-none">
                 <p className="text-xs text-muted-foreground uppercase font-bold">License Plate</p>
                 <p className="text-lg font-mono">{v.plate}</p>
-             </div>
+             </Card>
           </div>
 
-          <div className="h-48 rounded-lg border border-border overflow-hidden relative bg-muted/10">
+          <Card className="h-48 overflow-hidden relative border-none shadow-sm">
              <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${mapBg})`, backgroundSize: 'cover' }} />
              <div className="absolute inset-0 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-2 text-primary drop-shadow-md">
@@ -332,7 +333,7 @@ export default function HybridLineup() {
                    <span className="text-xs font-bold bg-background/80 px-2 py-1 rounded-full backdrop-blur-sm">Current Location</span>
                 </div>
              </div>
-          </div>
+          </Card>
         </div>
       );
     }
@@ -356,14 +357,14 @@ export default function HybridLineup() {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-             <div className="p-3 bg-muted/20 rounded-lg">
+             <Card className="p-3 bg-muted/20 border-none shadow-none">
                 <p className="text-xs text-muted-foreground uppercase font-bold">Status</p>
                 <p className="text-lg font-medium capitalize">{c.status}</p>
-             </div>
-             <div className="p-3 bg-muted/20 rounded-lg">
+             </Card>
+             <Card className="p-3 bg-muted/20 border-none shadow-none">
                 <p className="text-xs text-muted-foreground uppercase font-bold">Phone</p>
                 <p className="text-lg font-mono">{c.phone}</p>
-             </div>
+             </Card>
           </div>
 
           <div className="space-y-2">
@@ -372,11 +373,11 @@ export default function HybridLineup() {
                (t.driverIds && t.driverIds.includes(c.id)) || 
                (t.attendantIds && t.attendantIds.includes(c.id))
             ).map(t => (
-               <div key={t.id} className="flex items-center gap-3 p-2 border border-border rounded-md bg-card">
+               <Card key={t.id} className="flex items-center gap-3 p-2 border bg-card shadow-sm">
                   <Badge variant="outline">{t.packId || t.id}</Badge>
                   <span className="text-sm font-medium">{t.route}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{format(t.departureTime, "HH:mm")}</span>
-               </div>
+               </Card>
             ))}
             {localTrips.filter(t => 
                (t.driverIds && t.driverIds.includes(c.id)) || 
@@ -403,17 +404,17 @@ export default function HybridLineup() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-             <div className="p-3 bg-muted/20 rounded-lg">
+             <Card className="p-3 bg-muted/20 border-none shadow-none">
                 <p className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2"><Navigation className="h-3 w-3" /> Departure</p>
                 <p className="text-lg font-mono">{format(t.departureTime, "HH:mm")}</p>
-             </div>
-             <div className="p-3 bg-muted/20 rounded-lg">
+             </Card>
+             <Card className="p-3 bg-muted/20 border-none shadow-none">
                 <p className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2"><Check className="h-3 w-3" /> Arrival</p>
                 <p className="text-lg font-mono">{format(t.arrivalTime, "HH:mm")}</p>
-             </div>
+             </Card>
           </div>
 
-          <div className="h-48 rounded-lg border border-border overflow-hidden relative bg-muted/10">
+          <Card className="h-48 overflow-hidden relative border-none shadow-sm">
              <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${mapBg})`, backgroundSize: 'cover' }} />
              {/* Mock Route Line */}
              <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -424,7 +425,7 @@ export default function HybridLineup() {
              <div className="absolute bottom-2 right-2 bg-background/90 px-2 py-1 rounded text-xs font-bold shadow-sm">
                 Live Traffic: Clear
              </div>
-          </div>
+          </Card>
         </div>
       );
     }
