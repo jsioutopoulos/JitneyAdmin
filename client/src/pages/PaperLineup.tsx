@@ -282,34 +282,34 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {trips.map((trip) => (
-                        <TableRow key={trip.id} className="group hover:bg-muted/5 transition-colors">
+                    {trips.flatMap(t => t.legs ? t.legs.map(l => ({ ...l, parent: t })) : [{ id: t.id, status: t.status, direction: t.direction, parent: t }]).map((item) => (
+                        <TableRow key={`${item.parent.id}-${item.id}`} className="group hover:bg-muted/5 transition-colors">
                             <TableCell className="font-mono font-medium text-primary">
-                                {trip.packId || trip.id.toUpperCase()}
+                                {item.id}
                             </TableCell>
                             <TableCell>
                                 <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{trip.route}</span>
-                                    <span className="text-xs text-muted-foreground capitalize">{trip.direction}</span>
+                                    <span className="font-medium text-sm">{item.parent.route}</span>
+                                    <span className="text-xs text-muted-foreground capitalize">{item.direction}</span>
                                 </div>
                             </TableCell>
                             <TableCell>
                                 <Badge variant="secondary" className={cn(
                                     "font-medium capitalize shadow-sm border",
-                                    trip.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
-                                    trip.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                    trip.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
-                                    trip.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
+                                    item.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
+                                    item.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                    item.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
+                                    item.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
                                 )}>
-                                    {trip.status}
+                                    {item.status}
                                 </Badge>
                             </TableCell>
                             <TableCell>
-                                {trip.vehicleId ? (
+                                {item.parent.vehicleId ? (
                                     <div className="flex items-center gap-2">
                                         <Bus className="h-4 w-4 text-muted-foreground" />
                                         <span className="font-mono text-sm">
-                                            {vehicles.find(v => v.id === trip.vehicleId)?.plate}
+                                            {vehicles.find(v => v.id === item.parent.vehicleId)?.plate}
                                         </span>
                                     </div>
                                 ) : (
@@ -318,8 +318,8 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                             </TableCell>
                             <TableCell>
                                 <div className="flex flex-wrap gap-1">
-                                    {trip.driverIds.length > 0 ? (
-                                        trip.driverIds.map(did => (
+                                    {item.parent.driverIds.length > 0 ? (
+                                        item.parent.driverIds.map(did => (
                                             <Badge key={did} variant="outline" className="text-[10px] bg-background">
                                                 {crew.find(c => c.id === did)?.name.split(' ')[0]}
                                             </Badge>
@@ -332,20 +332,20 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                             <TableCell className="text-right">
                                 <div className="flex flex-col items-end">
                                     <span className="font-bold text-sm tabular-nums">
-                                        {trip.reservedCount} / {trip.capacity}
+                                        {item.parent.reservedCount} / {item.parent.capacity}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        {Math.round((trip.reservedCount / trip.capacity) * 100)}% Full
+                                        {Math.round((item.parent.reservedCount / item.parent.capacity) * 100)}% Full
                                     </span>
                                 </div>
                             </TableCell>
                             <TableCell className="text-right">
                                 <div className="flex flex-col items-end">
                                     <span className="font-medium tabular-nums text-sm">
-                                        {format(trip.departureTime, "HH:mm")}
+                                        {format(item.parent.departureTime, "HH:mm")}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        Est. Arr {format(trip.arrivalTime, "HH:mm")}
+                                        Est. Arr {format(item.parent.arrivalTime, "HH:mm")}
                                     </span>
                                 </div>
                             </TableCell>
@@ -388,6 +388,28 @@ export default function HybridLineup() {
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Resources Filter State
+  const [resourceSearchQuery, setResourceSearchQuery] = useState("");
+  const [collapsedResources, setCollapsedResources] = useState<{ [key: string]: boolean }>({
+    vehicle: false,
+    driver: false,
+    attendant: false
+  });
+
+  const toggleResourceCollapse = (type: string) => {
+    setCollapsedResources(prev => ({ ...prev, [type]: !prev[type] }));
+  };
+
+  // Filtered Resources
+  const filteredVehicles = vehicles.filter(v => 
+    v.name.toLowerCase().includes(resourceSearchQuery.toLowerCase()) || 
+    v.plate.toLowerCase().includes(resourceSearchQuery.toLowerCase())
+  );
+
+  const filteredCrew = crew.filter(c => 
+    c.name.toLowerCase().includes(resourceSearchQuery.toLowerCase())
+  );
 
   // DnD Handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -737,63 +759,110 @@ export default function HybridLineup() {
           {/* LEFT SIDEBAR - RESOURCES */}
           {sidebarOpen && (
             <div className="w-72 bg-background border-r border-border flex flex-col shadow-sm shrink-0 z-20">
-              <div className="p-4 border-b border-border flex items-center justify-between">
-                <h2 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Resources</h2>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSidebarOpen(false)}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
+              <div className="p-4 border-b border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Resources</h2>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSidebarOpen(false)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search resources..." 
+                    className="h-8 pl-8 text-xs" 
+                    value={resourceSearchQuery}
+                    onChange={(e) => setResourceSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
                   <div>
-                    <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2 sticky top-0 bg-background py-1 z-10">
-                      <Bus className="h-3.5 w-3.5" /> Vehicles
-                    </h3>
-                    <div className="space-y-1">
-                      {vehicles.map((v: Vehicle) => (
-                        <DraggableResource 
-                          key={v.id} 
-                          resource={v} 
-                          type="vehicle" 
-                          compact 
-                          onContextMenu={(e) => handleContextMenu(e, 'vehicle', v.id)}
-                        />
-                      ))}
+                    <div 
+                      className="flex items-center justify-between cursor-pointer mb-3 sticky top-0 bg-background py-1 z-10 group"
+                      onClick={() => toggleResourceCollapse('vehicle')}
+                    >
+                        <h3 className="text-xs font-bold text-primary flex items-center gap-2">
+                          <Bus className="h-3.5 w-3.5" /> Vehicles ({filteredVehicles.length})
+                        </h3>
+                        <ChevronRight className={cn("h-3 w-3 text-muted-foreground transition-transform", !collapsedResources.vehicle && "rotate-90")} />
                     </div>
+                    
+                    {!collapsedResources.vehicle && (
+                      <div className="space-y-1">
+                        {filteredVehicles.map((v: Vehicle) => (
+                          <DraggableResource 
+                            key={v.id} 
+                            resource={v} 
+                            type="vehicle" 
+                            compact 
+                            onContextMenu={(e) => handleContextMenu(e, 'vehicle', v.id)}
+                          />
+                        ))}
+                        {filteredVehicles.length === 0 && (
+                          <p className="text-xs text-muted-foreground italic px-2">No vehicles found</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2 sticky top-0 bg-background py-1 z-10">
-                      <User className="h-3.5 w-3.5" /> Drivers
-                    </h3>
-                    <div className="space-y-1">
-                      {crew.filter((c: Crew) => c.role === 'driver').map((c: Crew) => (
-                        <DraggableResource 
-                          key={c.id} 
-                          resource={c} 
-                          type="driver" 
-                          compact 
-                          onContextMenu={(e) => handleContextMenu(e, 'driver', c.id)}
-                        />
-                      ))}
+                    <div 
+                      className="flex items-center justify-between cursor-pointer mb-3 sticky top-0 bg-background py-1 z-10 group"
+                      onClick={() => toggleResourceCollapse('driver')}
+                    >
+                        <h3 className="text-xs font-bold text-primary flex items-center gap-2">
+                          <User className="h-3.5 w-3.5" /> Drivers ({filteredCrew.filter((c: Crew) => c.role === 'driver').length})
+                        </h3>
+                        <ChevronRight className={cn("h-3 w-3 text-muted-foreground transition-transform", !collapsedResources.driver && "rotate-90")} />
                     </div>
+
+                    {!collapsedResources.driver && (
+                      <div className="space-y-1">
+                        {filteredCrew.filter((c: Crew) => c.role === 'driver').map((c: Crew) => (
+                          <DraggableResource 
+                            key={c.id} 
+                            resource={c} 
+                            type="driver" 
+                            compact 
+                            onContextMenu={(e) => handleContextMenu(e, 'driver', c.id)}
+                          />
+                        ))}
+                        {filteredCrew.filter((c: Crew) => c.role === 'driver').length === 0 && (
+                          <p className="text-xs text-muted-foreground italic px-2">No drivers found</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-bold text-primary mb-3 flex items-center gap-2 sticky top-0 bg-background py-1 z-10">
-                      <Shield className="h-3.5 w-3.5" /> Attendants
-                    </h3>
-                    <div className="space-y-1">
-                      {crew.filter((c: Crew) => c.role === 'attendant').map((c: Crew) => (
-                        <DraggableResource 
-                          key={c.id} 
-                          resource={c} 
-                          type="attendant" 
-                          compact 
-                          onContextMenu={(e) => handleContextMenu(e, 'attendant', c.id)}
-                        />
-                      ))}
+                    <div 
+                      className="flex items-center justify-between cursor-pointer mb-3 sticky top-0 bg-background py-1 z-10 group"
+                      onClick={() => toggleResourceCollapse('attendant')}
+                    >
+                        <h3 className="text-xs font-bold text-primary flex items-center gap-2">
+                          <Shield className="h-3.5 w-3.5" /> Attendants ({filteredCrew.filter((c: Crew) => c.role === 'attendant').length})
+                        </h3>
+                         <ChevronRight className={cn("h-3 w-3 text-muted-foreground transition-transform", !collapsedResources.attendant && "rotate-90")} />
                     </div>
+                    
+                    {!collapsedResources.attendant && (
+                      <div className="space-y-1">
+                        {filteredCrew.filter((c: Crew) => c.role === 'attendant').map((c: Crew) => (
+                          <DraggableResource 
+                            key={c.id} 
+                            resource={c} 
+                            type="attendant" 
+                            compact 
+                            onContextMenu={(e) => handleContextMenu(e, 'attendant', c.id)}
+                          />
+                        ))}
+                         {filteredCrew.filter((c: Crew) => c.role === 'attendant').length === 0 && (
+                          <p className="text-xs text-muted-foreground italic px-2">No attendants found</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </ScrollArea>
@@ -957,7 +1026,7 @@ export default function HybridLineup() {
                                 )}
                                 
                                 {row.left && row.left.hasAda && (
-                                  <Accessibility className="h-2.5 w-2.5 text-blue-500 absolute top-1 right-1" />
+                                  <div className="absolute top-1 right-1" />
                                 )}
                             </div>
                             
@@ -1078,7 +1147,7 @@ export default function HybridLineup() {
                                 )}
 
                                 {row.right && row.right.hasAda && (
-                                  <Accessibility className="h-2.5 w-2.5 text-blue-500 absolute top-1 right-1" />
+                                  <div className="absolute top-1 right-1" />
                                 )}
                             </div>
                             
