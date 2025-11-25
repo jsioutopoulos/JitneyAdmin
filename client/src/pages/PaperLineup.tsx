@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger, TripLeg } from "@/lib/mockData";
 import { format } from "date-fns";
@@ -588,13 +588,36 @@ export default function HybridLineup() {
   };
 
 
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    open: boolean;
+    x: number;
+    y: number;
+    type: ResourceType;
+    id: string;
+    legId?: string;
+  } | null>(null);
+
   // Context Menu Handler
   const handleContextMenu = (e: React.MouseEvent, type: ResourceType, id: string, legId?: string) => {
     e.preventDefault();
     e.stopPropagation();
-    setDrawerContent({ type, id, legId });
-    setDrawerOpen(true);
+    setContextMenu({
+        open: true,
+        x: e.clientX,
+        y: e.clientY,
+        type,
+        id,
+        legId
+    });
   };
+
+  // Close context menu on click elsewhere
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
 
   // Split trips logic
   const leftColTrips = localTrips.filter((_, i) => i % 2 === 0);
@@ -1630,6 +1653,64 @@ export default function HybridLineup() {
              </div>
           ) : null}
         </DragOverlay>
+
+        {/* Custom Context Menu */}
+        {contextMenu && (
+            <div 
+                className="fixed z-50 w-56 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80 zoom-in-95"
+                style={{ top: contextMenu.y, left: contextMenu.x }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {contextMenu.type === 'trip' ? (
+                    <>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-b mb-1">
+                            Trip Options
+                        </div>
+                        <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2" onClick={() => {
+                            setDrawerContent({ type: 'trip', id: contextMenu.id, legId: contextMenu.legId });
+                            setDrawerOpen(true);
+                            setContextMenu(null);
+                        }}>
+                            <List className="mr-2 h-3.5 w-3.5" />
+                            View Manifest
+                        </Button>
+                         <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2" onClick={() => {
+                            setDrawerContent({ type: 'stops', id: contextMenu.id });
+                            setDrawerOpen(true);
+                            setContextMenu(null);
+                        }}>
+                            <MapPin className="mr-2 h-3.5 w-3.5" />
+                            Manage Stops
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <X className="mr-2 h-3.5 w-3.5" />
+                            Cancel Trip
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-b mb-1">
+                            {contextMenu.type === 'vehicle' ? 'Vehicle' : 'Crew'} Options
+                        </div>
+                        <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2" onClick={() => {
+                            setDrawerContent({ type: contextMenu.type, id: contextMenu.id });
+                            setDrawerOpen(true);
+                            setContextMenu(null);
+                        }}>
+                            <List className="mr-2 h-3.5 w-3.5" />
+                            View Details
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                             // Logic to unassign would go here
+                             setContextMenu(null);
+                        }}>
+                            <X className="mr-2 h-3.5 w-3.5" />
+                            Unassign
+                        </Button>
+                    </>
+                )}
+            </div>
+        )}
       </DndContext>
     </Layout>
   );
