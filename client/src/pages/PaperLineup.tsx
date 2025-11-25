@@ -102,7 +102,7 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
         const v = r as Vehicle;
         switch(v.type) {
             case 'Coach': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Green (Jitneys & Coaches)
-            case 'Ambassador': return 'border-amber-500 bg-amber-50/50 text-amber-900'; // Gold/Amber (30 pax)
+            case 'Ambassador': return 'border-blue-500 bg-blue-50/50 text-blue-900'; // Blue (30 pax)
             case 'Trolley': return 'border-red-500 bg-red-50/50 text-red-900'; // Trolley (~35 pax)
             case 'SCT': return 'border-purple-500 bg-purple-50/50 text-purple-900'; // Suffolk County Transit
             default: return 'border-muted bg-muted/20';
@@ -246,8 +246,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                     className="w-full h-full flex items-center px-2 hover:bg-muted/50 cursor-pointer"
                     onContextMenu={(e) => {
                         if (onEmptyContextMenu) {
-                             // e.stopPropagation(); // Don't stop propagation here, let it bubble to cell if handled there, or handle it explicitly
-                             // Wait, PopoverTrigger might interfere. Let's use the handler passed in.
+                             // Only trigger if we are NOT clicking on a badge (badges stop propagation, but just in case)
                              onEmptyContextMenu(e);
                         }
                     }}
@@ -268,7 +267,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                     )}
                 </div>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="start">
+            <PopoverContent className="w-[200px] p-0" align="start" sideOffset={5} alignOffset={-10} className="z-[60]">
                 <Command>
                 <CommandInput placeholder="Search..." className="h-8 text-xs" />
                 <CommandList>
@@ -1440,7 +1439,6 @@ export default function HybridLineup() {
                                       icon={Bus}
                                       onResourceRightClick={(e, id, type) => handleContextMenu(e, 'vehicle', id)}
                                       onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
-                                      onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -1459,7 +1457,6 @@ export default function HybridLineup() {
                                         icon={User}
                                         onResourceRightClick={(e, id, type) => handleContextMenu(e, 'driver', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('driver', id)}
-                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1475,7 +1472,6 @@ export default function HybridLineup() {
                                         icon={Shield}
                                         onResourceRightClick={(e, id, type) => handleContextMenu(e, 'attendant', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
-                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1567,7 +1563,6 @@ export default function HybridLineup() {
                                       icon={Bus}
                                       onResourceRightClick={(e, id, type) => handleContextMenu(e, 'vehicle', id)}
                                       onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
-                                      onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -1586,7 +1581,6 @@ export default function HybridLineup() {
                                         icon={User}
                                         onResourceRightClick={(e, id, type) => handleContextMenu(e, 'driver', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('driver', id)}
-                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1602,7 +1596,6 @@ export default function HybridLineup() {
                                         icon={Shield}
                                         onResourceRightClick={(e, id, type) => handleContextMenu(e, 'attendant', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
-                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                       />
                                     </DroppableCell>
                                   )}
