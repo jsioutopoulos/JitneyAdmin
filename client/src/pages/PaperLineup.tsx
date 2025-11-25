@@ -64,7 +64,7 @@ import mapBg from "@assets/generated_images/subtle_topological_map_background.pn
 
 // --- Types & Helpers ---
 
-type ResourceType = 'vehicle' | 'driver' | 'attendant' | 'trip' | 'leg';
+type ResourceType = 'vehicle' | 'driver' | 'attendant' | 'trip' | 'leg' | 'reservations' | 'stops' | 'seats';
 
 interface DraggableData {
   type: ResourceType;
@@ -250,7 +250,7 @@ const getCleanTripId = (id: string): string => {
   return id.replace(/sg|trans|\/|\+|\s+/gi, '').replace(/[^0-9]/g, '');
 };
 
-const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
+const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: ResourceType, id: string) => void }) => {
   // Flatten trips into individual card items
   const cardItems = trips.flatMap(t => {
     if (t.legs && t.legs.length > 0) {
@@ -271,6 +271,13 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
     }];
   });
 
+  // Helper to get display status (Open/Closed/Cancelled)
+  const getDisplayStatus = (status: string) => {
+      if (status === 'cancelled') return 'Cancelled';
+      if (status === 'completed') return 'Closed';
+      return 'Open';
+  };
+
   return (
     <div className="p-6 h-full overflow-hidden flex flex-col bg-muted/10">
       <div className="flex-1 overflow-auto">
@@ -279,23 +286,22 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                 <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex items-center p-3 gap-4 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
                     
                     {/* 1. ID & Status Block */}
-                    <div className="w-28 shrink-0 flex flex-col gap-1.5">
+                    <div className="w-28 shrink-0 flex flex-col gap-2">
                         <span className="text-3xl font-bold font-mono tracking-tighter text-primary leading-none">
                             {item.id}
                         </span>
                         <Badge variant="outline" className={cn(
-                            "w-fit text-[10px] font-normal capitalize h-5 px-1.5 border",
-                            item.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200",
-                            item.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                            item.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
-                            item.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
+                            "w-fit text-[10px] font-bold uppercase h-5 px-1.5 border",
+                            getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
+                            getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
                         )}>
-                            {item.status}
+                            {getDisplayStatus(item.status)}
                         </Badge>
                     </div>
 
                     {/* Separator */}
-                    <div className="h-10 w-px bg-border/50 shrink-0" />
+                    <div className="h-12 w-px bg-border/50 shrink-0" />
 
                     {/* 2. Route Info Block */}
                     <div className="flex-1 min-w-[180px] flex flex-col justify-center">
@@ -310,42 +316,11 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                         </div>
                     </div>
 
-                     {/* 3. Resources Block */}
-                    <div className="w-48 shrink-0 flex flex-col gap-2 justify-center">
-                        {/* Vehicle */}
-                        <div className="flex items-center gap-2 text-xs">
-                             <Bus className="h-3.5 w-3.5 text-muted-foreground" />
-                             {item.parent.vehicleId ? (
-                                <span className="font-mono font-medium">
-                                    {vehicles.find(v => v.id === item.parent.vehicleId)?.plate}
-                                </span>
-                             ) : (
-                                <span className="text-muted-foreground italic">--</span>
-                             )}
-                        </div>
-                        {/* Driver */}
-                        <div className="flex items-center gap-2 text-xs">
-                             <User className="h-3.5 w-3.5 text-muted-foreground" />
-                             {item.parent.driverIds.length > 0 ? (
-                                <div className="flex items-center gap-1">
-                                    <span className="font-medium truncate max-w-[120px]">
-                                        {crew.find(c => c.id === item.parent.driverIds[0])?.name}
-                                    </span>
-                                    {item.parent.driverIds.length > 1 && (
-                                        <Badge variant="secondary" className="h-4 px-1 text-[9px] rounded-sm">+{item.parent.driverIds.length - 1}</Badge>
-                                    )}
-                                </div>
-                             ) : (
-                                <span className="text-muted-foreground italic">--</span>
-                             )}
-                        </div>
-                    </div>
-
                     {/* Separator */}
-                    <div className="h-10 w-px bg-border/50 shrink-0 hidden lg:block" />
+                    <div className="h-12 w-px bg-border/50 shrink-0 hidden lg:block" />
 
-                    {/* 4. Capacity & Time Block */}
-                    <div className="w-40 shrink-0 flex flex-col items-end justify-center gap-1.5">
+                     {/* 3. Capacity & Time Block */}
+                     <div className="w-40 shrink-0 flex flex-col items-end justify-center gap-1.5">
                         <div className="flex flex-col items-end w-full">
                             <div className="flex items-center gap-2 mb-1 w-full justify-end">
                                 <span className="text-[10px] text-muted-foreground font-medium">
@@ -371,12 +346,49 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                         </div>
                     </div>
 
-                    {/* 5. Actions */}
-                    <div className="shrink-0 pl-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                    {/* Separator */}
+                    <div className="h-12 w-px bg-border/50 shrink-0" />
+
+                    {/* 4. Actions Block */}
+                    <div className="flex items-center gap-2 shrink-0">
+                         <div className="flex flex-col gap-1">
+                             <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('reservations', item.parent.id)}>
+                                Reservations
+                             </Button>
+                             <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('stops', item.parent.id)}>
+                                Stops
+                             </Button>
+                             <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('seats', item.parent.id)}>
+                                Seats
+                             </Button>
+                         </div>
+                         
+                         {/* Stop Status Controls */}
+                         <div className="flex flex-col gap-1 border-l pl-2 ml-1">
+                            <Button 
+                                variant={getDisplayStatus(item.status) === 'Open' ? 'default' : 'ghost'} 
+                                size="sm" 
+                                className={cn("h-5 text-[9px] w-16", getDisplayStatus(item.status) === 'Open' ? "bg-emerald-600 hover:bg-emerald-700" : "text-muted-foreground")}
+                            >
+                                Open
+                            </Button>
+                            <Button 
+                                variant={getDisplayStatus(item.status) === 'Closed' ? 'default' : 'ghost'} 
+                                size="sm" 
+                                className={cn("h-5 text-[9px] w-16", getDisplayStatus(item.status) === 'Closed' ? "bg-gray-600 hover:bg-gray-700" : "text-muted-foreground")}
+                            >
+                                Closed
+                            </Button>
+                            <Button 
+                                variant={getDisplayStatus(item.status) === 'Cancelled' ? 'default' : 'ghost'} 
+                                size="sm" 
+                                className={cn("h-5 text-[9px] w-16", getDisplayStatus(item.status) === 'Cancelled' ? "bg-red-600 hover:bg-red-700" : "text-muted-foreground")}
+                            >
+                                Cancelled
+                            </Button>
+                         </div>
                     </div>
+
                 </Card>
             ))}
         </div>
@@ -760,7 +772,179 @@ export default function HybridLineup() {
       );
     }
 
+    if (drawerContent.type === 'reservations') {
+        const trip = localTrips.find(t => t.id === drawerContent.id);
+        if (!trip) return null;
+        return (
+            <div className="space-y-4 h-full flex flex-col">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Users className="h-5 w-5 text-primary" />
+                            Reservations
+                        </h2>
+                        <p className="text-sm text-muted-foreground">Trip {getCleanTripId(trip.packId || trip.id) || trip.id} • {trip.route}</p>
+                    </div>
+                    <Badge variant="secondary" className="text-lg px-3 py-1">{trip.reservedCount} / {trip.capacity}</Badge>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search passengers..." className="h-8" />
+                </div>
+
+                <div className="flex-1 overflow-auto border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Seat</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {trip.passengers.map(p => (
+                                <TableRow key={p.id}>
+                                    <TableCell className="font-medium">
+                                        <div className="flex flex-col">
+                                            <span>{p.name}</span>
+                                            <span className="text-[10px] text-muted-foreground font-mono">{p.confirmationCode}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{p.type}</TableCell>
+                                    <TableCell className="font-mono">{p.seat || '--'}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={p.status === 'confirmed' ? 'default' : 'secondary'} className="capitalize text-[10px]">
+                                            {p.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        )
+    }
+
+    if (drawerContent.type === 'stops') {
+        const trip = localTrips.find(t => t.id === drawerContent.id);
+        if (!trip) return null;
+        return (
+            <div className="space-y-4 h-full flex flex-col">
+                <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        Stops
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Manage stop status and vehicle assignments</p>
+                </div>
+
+                <div className="space-y-2 flex-1 overflow-auto">
+                    {trip.stops.map((stop, idx) => (
+                        <Card key={stop.id} className="p-4 border-l-4 border-l-primary">
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-[10px] font-mono h-5 px-1">
+                                            {format(stop.time, "HH:mm")}
+                                        </Badge>
+                                        <h3 className="font-bold">{stop.name}</h3>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground capitalize mt-1">{stop.type}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button 
+                                        size="sm" 
+                                        variant={stop.status === 'open' ? 'default' : 'outline'}
+                                        className={cn("h-7 text-xs", stop.status === 'open' ? "bg-emerald-600 hover:bg-emerald-700" : "text-muted-foreground")}
+                                        onClick={() => toggleStop(trip.id, stop.id)}
+                                    >
+                                        {stop.status === 'open' ? 'Open' : 'Closed'}
+                                    </Button>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-muted/20 p-3 rounded-md">
+                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block">Assigned Vehicle</label>
+                                <div className="flex items-center gap-2">
+                                    <Bus className="h-4 w-4 text-muted-foreground" />
+                                    <select 
+                                        className="flex-1 h-8 text-sm bg-background border border-input rounded px-2"
+                                        value={stop.assignedVehicleId || ""}
+                                        onChange={(e) => assignStopVehicle(trip.id, stop.id, e.target.value)}
+                                    >
+                                        <option value="">-- Default ({vehicles.find(v => v.id === trip.vehicleId)?.name || 'Unassigned'}) --</option>
+                                        {vehicles.map(v => (
+                                            <option key={v.id} value={v.id}>{v.name} ({v.plate})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    if (drawerContent.type === 'seats') {
+        const trip = localTrips.find(t => t.id === drawerContent.id);
+        if (!trip) return null;
+        return (
+            <div className="space-y-4 h-full flex flex-col">
+                <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5 text-primary" />
+                        Seat Map
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Visual seat layout</p>
+                </div>
+                
+                <div className="flex-1 bg-muted/10 rounded-lg border border-dashed flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                        <div className="grid grid-cols-4 gap-4 p-8 max-w-md mx-auto bg-white rounded-xl shadow-sm border">
+                            {/* Driver Area */}
+                            <div className="col-span-4 border-b pb-4 mb-4 flex justify-between">
+                                <div className="h-10 w-10 border rounded bg-muted flex items-center justify-center">
+                                    <User className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                                <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider self-center">Front</div>
+                                <div className="h-10 w-10 border rounded bg-muted/30" />
+                            </div>
+
+                            {/* Seats */}
+                            {Array.from({ length: 10 }).map((_, row) => (
+                                <>
+                                    <div className="h-10 w-10 border rounded bg-emerald-100 border-emerald-200 flex items-center justify-center text-xs font-bold text-emerald-700 cursor-pointer hover:bg-emerald-200 transition-colors">
+                                        {row + 1}A
+                                    </div>
+                                    <div className="h-10 w-10 border rounded bg-emerald-100 border-emerald-200 flex items-center justify-center text-xs font-bold text-emerald-700 cursor-pointer hover:bg-emerald-200 transition-colors mr-4">
+                                        {row + 1}B
+                                    </div>
+                                    <div className="h-10 w-10 border rounded bg-white border-border flex items-center justify-center text-xs font-bold text-muted-foreground cursor-pointer hover:bg-gray-50 transition-colors">
+                                        {row + 1}C
+                                    </div>
+                                    <div className="h-10 w-10 border rounded bg-white border-border flex items-center justify-center text-xs font-bold text-muted-foreground cursor-pointer hover:bg-gray-50 transition-colors">
+                                        {row + 1}D
+                                    </div>
+                                </>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return null;
+  };
+
+  // Handle drawer action
+  const handleDrawerAction = (type: ResourceType, id: string) => {
+      setDrawerContent({ type, id });
+      setDrawerOpen(true);
   };
 
   return (
@@ -942,7 +1126,7 @@ export default function HybridLineup() {
 
             {/* Content Switcher */}
             {viewMode === 'digital' ? (
-               <DigitalGridView trips={localTrips} />
+               <DigitalGridView trips={localTrips} onAction={handleDrawerAction} />
             ) : (
               /* Scrollable Grid (Paper View) */
               <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible">
