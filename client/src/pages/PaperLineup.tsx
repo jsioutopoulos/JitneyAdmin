@@ -1128,6 +1128,7 @@ export default function HybridLineup() {
 
   return (
     <Layout>
+      <div className="h-full w-full" onContextMenu={(e) => e.preventDefault()}>
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
         <div className="h-full flex overflow-hidden">
           
@@ -1717,6 +1718,7 @@ export default function HybridLineup() {
             </div>
         )}
       </DndContext>
+      </div>
     </Layout>
   );
 }
