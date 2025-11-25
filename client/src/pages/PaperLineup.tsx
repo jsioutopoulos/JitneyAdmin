@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { trips, vehicles, crew, Trip, Crew, Vehicle } from "@/lib/mockData";
+import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger } from "@/lib/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone, Star } from "lucide-react";
+import { 
+  Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, 
+  History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone, 
+  Star, Users, Accessibility, Package, Search, List, UserPlus,
+  MoreHorizontal, Bell, Settings, Filter, Clock, Circle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
   SheetContent,
@@ -45,6 +51,15 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import mapBg from "@assets/generated_images/subtle_topological_map_background.png";
 
 // --- Types & Helpers ---
@@ -228,6 +243,7 @@ const EditableText = ({ value, onChange, className, onContextMenu }: { value: st
   );
 };
 
+// --- Main Component ---
 
 export default function HybridLineup() {
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
@@ -237,6 +253,10 @@ export default function HybridLineup() {
   // Drawer State
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerContent, setDrawerContent] = useState<{ type: ResourceType, id: string } | null>(null);
+  const [drawerTab, setDrawerTab] = useState("manifest");
+
+  // Filter State
+  const [searchQuery, setSearchQuery] = useState("");
 
   // DnD Handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -280,6 +300,29 @@ export default function HybridLineup() {
   const handleUpdateTrip = (tripId: string, field: keyof Trip, value: any) => {
     setLocalTrips(prev => prev.map(t => t.id === tripId ? { ...t, [field]: value } : t));
   };
+
+  // Handle Stop Toggle
+  const toggleStop = (tripId: string, stopId: string) => {
+    setLocalTrips(prev => prev.map(t => {
+        if (t.id !== tripId) return t;
+        return {
+            ...t,
+            stops: t.stops.map(s => s.id === stopId ? { ...s, status: s.status === 'open' ? 'closed' : 'open' } as Stop : s)
+        }
+    }));
+  };
+
+    // Handle Stop Vehicle Assignment
+  const assignStopVehicle = (tripId: string, stopId: string, vehicleId: string) => {
+    setLocalTrips(prev => prev.map(t => {
+        if (t.id !== tripId) return t;
+        return {
+            ...t,
+            stops: t.stops.map(s => s.id === stopId ? { ...s, assignedVehicleId: vehicleId } as Stop : s)
+        }
+    }));
+  };
+
 
   // Context Menu Handler
   const handleContextMenu = (e: React.MouseEvent, type: ResourceType, id: string) => {
@@ -394,39 +437,145 @@ export default function HybridLineup() {
       const t = localTrips.find(x => x.id === drawerContent.id);
       if (!t) return null;
       return (
-        <div className="space-y-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-               <Badge>{t.packId || t.id}</Badge>
-               <Badge variant="outline" className="capitalize">{t.status}</Badge>
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight">{t.route}</h2>
+        <Tabs defaultValue="manifest" className="w-full h-full flex flex-col">
+          <div className="mb-6 space-y-4 shrink-0">
+              <div className="flex items-center justify-between">
+                 <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                       <Badge className="text-lg px-2 py-1">{t.packId || t.id}</Badge>
+                       <Badge variant="outline" className="capitalize">{t.status}</Badge>
+                       {t.hasAda && <Accessibility className="h-4 w-4 text-blue-500" />}
+                    </div>
+                    <h2 className="text-2xl font-bold tracking-tight">{t.route}</h2>
+                 </div>
+                 <div className="text-right">
+                     <div className="text-2xl font-bold font-mono">{t.reservedCount}/{t.capacity}</div>
+                     <div className="text-xs text-muted-foreground uppercase">Capacity</div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-muted/10 p-2 rounded border border-border flex flex-col items-center justify-center">
+                      <span className="text-xs font-bold text-muted-foreground uppercase">Res</span>
+                      <span className="text-lg font-bold">{t.reservedCount}</span>
+                  </div>
+                   <div className="bg-muted/10 p-2 rounded border border-border flex flex-col items-center justify-center">
+                      <span className="text-xs font-bold text-muted-foreground uppercase">Avl</span>
+                      <span className="text-lg font-bold text-emerald-600">{t.capacity - t.reservedCount}</span>
+                  </div>
+                   <div className="bg-muted/10 p-2 rounded border border-border flex flex-col items-center justify-center">
+                      <span className="text-xs font-bold text-muted-foreground uppercase">Check-In</span>
+                      <span className="text-lg font-bold text-blue-600">{Math.floor(t.reservedCount * 0.8)}</span>
+                  </div>
+              </div>
+
+              <TabsList className="w-full grid grid-cols-3">
+                <TabsTrigger value="manifest">Manifest</TabsTrigger>
+                <TabsTrigger value="stops">Stops</TabsTrigger>
+                <TabsTrigger value="map">Map</TabsTrigger>
+              </TabsList>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-             <Card className="p-3 bg-muted/20 border-none shadow-none">
-                <p className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2"><Navigation className="h-3 w-3" /> Departure</p>
-                <p className="text-lg font-mono">{format(t.departureTime, "HH:mm")}</p>
-             </Card>
-             <Card className="p-3 bg-muted/20 border-none shadow-none">
-                <p className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2"><Check className="h-3 w-3" /> Arrival</p>
-                <p className="text-lg font-mono">{format(t.arrivalTime, "HH:mm")}</p>
-             </Card>
-          </div>
-
-          <Card className="h-48 overflow-hidden relative border-none shadow-sm">
-             <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${mapBg})`, backgroundSize: 'cover' }} />
-             {/* Mock Route Line */}
-             <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                <path d="M 40 100 Q 150 50 260 100" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" strokeDasharray="5,5" />
-                <circle cx="40" cy="100" r="4" fill="hsl(var(--primary))" />
-                <circle cx="260" cy="100" r="4" fill="hsl(var(--primary))" />
-             </svg>
-             <div className="absolute bottom-2 right-2 bg-background/90 px-2 py-1 rounded text-xs font-bold shadow-sm">
-                Live Traffic: Clear
+          <TabsContent value="manifest" className="flex-1 overflow-hidden flex flex-col mt-0">
+             <div className="flex items-center gap-2 mb-4 shrink-0">
+                <Input placeholder="Search passengers..." className="h-8" />
+                <Button size="sm"><UserPlus className="h-4 w-4 mr-2" /> Add</Button>
              </div>
-          </Card>
-        </div>
+             <div className="border rounded-md flex-1 overflow-hidden">
+                <Table>
+                    <TableHeader className="bg-muted/20 sticky top-0 z-10">
+                        <TableRow>
+                            <TableHead className="w-[30px]"></TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Res #</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead className="text-right">Seat</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody className="overflow-y-auto">
+                        {t.passengers.map(p => (
+                            <TableRow key={p.id}>
+                                <TableCell><Checkbox checked={p.status === 'checked-in'} /></TableCell>
+                                <TableCell className="font-medium">
+                                    {p.name}
+                                    {p.notes === 'ADA' && <Accessibility className="h-3 w-3 inline ml-2 text-blue-500" />}
+                                </TableCell>
+                                <TableCell className="text-xs font-mono text-muted-foreground">{p.confirmationCode}</TableCell>
+                                <TableCell>{p.type}</TableCell>
+                                <TableCell className="text-right font-mono">{p.seat}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="stops" className="flex-1 overflow-y-auto mt-0">
+             <div className="space-y-4">
+                 <div className="flex items-center justify-between mb-2">
+                     <h3 className="text-sm font-bold text-muted-foreground">Stop Management</h3>
+                     <span className="text-xs text-muted-foreground">{t.stops.length} stops</span>
+                 </div>
+                 
+                 {t.stops.map((stop, idx) => (
+                     <Card key={stop.id} className="p-3">
+                         <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="font-mono">{idx + 1}</Badge>
+                                <span className="font-bold">{stop.name}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                                 <span className="text-xs font-mono text-muted-foreground">{format(stop.time, "HH:mm")}</span>
+                                 <Button 
+                                    variant={stop.status === 'open' ? "outline" : "destructive"} 
+                                    size="sm" 
+                                    className="h-6 text-xs"
+                                    onClick={() => toggleStop(t.id, stop.id)}
+                                 >
+                                     {stop.status === 'open' ? 'Open' : 'Closed'}
+                                 </Button>
+                             </div>
+                         </div>
+                         
+                         {/* Vehicle Assignment for Stop (if multiple vehicles) */}
+                         {(t.vehicleId || (t.driverIds && t.driverIds.length > 0)) && (
+                             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Service By:</span>
+                                <div className="flex gap-1">
+                                    {/* Primary Vehicle */}
+                                    {t.vehicleId && (
+                                        <Badge 
+                                            variant={stop.assignedVehicleId === t.vehicleId || !stop.assignedVehicleId ? "default" : "outline"}
+                                            className="cursor-pointer text-[10px] h-5"
+                                            onClick={() => assignStopVehicle(t.id, stop.id, t.vehicleId!)}
+                                        >
+                                            {vehicles.find(v => v.id === t.vehicleId)?.plate.split('-')[1] || 'Bus'}
+                                        </Badge>
+                                    )}
+                                    {/* Any other logic for extra vehicles would go here */}
+                                </div>
+                             </div>
+                         )}
+                     </Card>
+                 ))}
+             </div>
+          </TabsContent>
+
+          <TabsContent value="map" className="flex-1 mt-0">
+              <Card className="h-full w-full overflow-hidden relative border-none shadow-sm bg-muted/10">
+                 <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${mapBg})`, backgroundSize: 'cover' }} />
+                 {/* Mock Route Line */}
+                 <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                    <path d="M 40 100 Q 150 50 260 100" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" strokeDasharray="5,5" />
+                    <circle cx="40" cy="100" r="4" fill="hsl(var(--primary))" />
+                    <circle cx="260" cy="100" r="4" fill="hsl(var(--primary))" />
+                 </svg>
+                 <div className="absolute bottom-2 right-2 bg-background/90 px-2 py-1 rounded text-xs font-bold shadow-sm">
+                    Live Traffic: Clear
+                 </div>
+              </Card>
+          </TabsContent>
+        </Tabs>
       );
     }
 
@@ -507,27 +656,41 @@ export default function HybridLineup() {
           {/* MAIN CONTENT AREA */}
           <div className="flex-1 flex flex-col bg-muted/10 min-w-0">
             {/* Toolbar */}
-            <div className="bg-card border-b border-border p-4 flex justify-between items-center shadow-sm z-10 print:hidden shrink-0">
-              <div className="flex items-center gap-3">
+            <div className="bg-card border-b border-border p-3 flex justify-between items-center shadow-sm z-10 print:hidden shrink-0 gap-4">
+              <div className="flex items-center gap-3 flex-1">
                 {!sidebarOpen && (
                   <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="mr-2">
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 )}
-                <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm">
+                <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm shrink-0">
                   <Printer className="h-5 w-5" />
                 </div>
-                <div>
-                  <h1 className="text-lg font-bold text-foreground leading-none">Digital Lineup Grid</h1>
-                  <p className="text-xs text-muted-foreground mt-1">Hybrid View • Monday, Nov 24</p>
+                <div className="relative max-w-md w-full">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search reservations, trips, or resources..." 
+                        className="pl-8 h-9 bg-muted/20 border-none focus-visible:ring-1"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => window.print()}>
+              
+              <div className="flex items-center gap-2">
+                 <Button variant="outline" size="sm" className="h-9 gap-2 hidden lg:flex">
+                    <Accessibility className="h-4 w-4 text-blue-500" />
+                    <span className="hidden xl:inline">ADA</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1">3</Badge>
+                 </Button>
+                 <Button variant="outline" size="sm" className="h-9 gap-2 hidden lg:flex">
+                    <Package className="h-4 w-4 text-amber-500" />
+                    <span className="hidden xl:inline">Freight</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1">12</Badge>
+                 </Button>
+                 <Separator orientation="vertical" className="h-6 mx-2 hidden lg:block" />
+                 <Button variant="outline" size="sm" onClick={() => window.print()}>
                   Print Sheet
-                </Button>
-                <Button size="sm" className="gap-2">
-                  <History className="h-4 w-4" /> History
                 </Button>
               </div>
             </div>
@@ -579,7 +742,10 @@ export default function HybridLineup() {
                                     onChange={(val) => handleUpdateTrip(row.left!.id, 'packId', val)}
                                     className="text-xs font-bold text-primary text-center"
                                   />
-                                  <span className="text-[10px] text-muted-foreground absolute bottom-0.5">{format(row.left.departureTime, "HH:mm")}</span>
+                                  <div className="flex items-center gap-1 absolute bottom-0.5">
+                                      <span className="text-[10px] text-muted-foreground">{format(row.left.departureTime, "HH:mm")}</span>
+                                      {row.left.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
+                                  </div>
                                 </>
                               )}
                           </div>
@@ -654,7 +820,10 @@ export default function HybridLineup() {
                                     onChange={(val) => handleUpdateTrip(row.right!.id, 'packId', val)}
                                     className="text-xs font-bold text-primary text-center"
                                   />
-                                  <span className="text-[10px] text-muted-foreground absolute bottom-0.5">{format(row.right.departureTime, "HH:mm")}</span>
+                                  <div className="flex items-center gap-1 absolute bottom-0.5">
+                                      <span className="text-[10px] text-muted-foreground">{format(row.right.departureTime, "HH:mm")}</span>
+                                      {row.right.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
+                                  </div>
                                 </>
                               )}
                           </div>
@@ -725,12 +894,17 @@ export default function HybridLineup() {
 
           {/* RIGHT DRAWER - DETAILS */}
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto p-6">
-              <SheetHeader className="mb-6">
-                <SheetTitle>Resource Details</SheetTitle>
-                <SheetDescription>View and manage specific resource information.</SheetDescription>
-              </SheetHeader>
-              {renderDrawerContent()}
+            <SheetContent className="w-[500px] sm:w-[650px] overflow-hidden flex flex-col p-0 gap-0">
+                {/* Custom Sheet Header to fit Tabs nicely */}
+                <div className="p-6 pb-0">
+                    <SheetHeader className="mb-2">
+                        <SheetTitle>Dispatch Operations</SheetTitle>
+                        <SheetDescription>Manage details for {drawerContent?.type} {drawerContent?.id}</SheetDescription>
+                    </SheetHeader>
+                </div>
+                <div className="flex-1 overflow-hidden flex flex-col p-6 pt-2">
+                   {renderDrawerContent()}
+                </div>
             </SheetContent>
           </Sheet>
 

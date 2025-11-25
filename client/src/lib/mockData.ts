@@ -21,6 +21,27 @@ export interface Crew {
   phone: string;
 }
 
+export interface Passenger {
+  id: string;
+  name: string;
+  confirmationCode: string;
+  type: "Adult" | "Child" | "Senior";
+  status: "confirmed" | "checked-in" | "no-show" | "cancelled";
+  notes?: string; // e.g., ADA, Luggage
+  pickupStopId: string;
+  dropoffStopId: string;
+  seat?: string;
+}
+
+export interface Stop {
+  id: string;
+  name: string;
+  time: Date;
+  type: "pickup" | "dropoff" | "both";
+  status: "open" | "closed";
+  assignedVehicleId?: string; // If trip has multiple vehicles
+}
+
 export interface Trip {
   id: string;
   route: string;
@@ -31,9 +52,14 @@ export interface Trip {
   driverIds: string[];
   attendantIds: string[];
   passengerCount: number;
+  capacity: number; // Editable capacity
+  reservedCount: number;
   status: TripStatus;
   packId?: string; // Trip chain ID - Used for the "Trip" column display
   notes?: string;
+  hasAda?: boolean;
+  passengers: Passenger[];
+  stops: Stop[];
 }
 
 const today = startOfToday();
@@ -71,20 +97,55 @@ export const crew: Crew[] = [
   { id: "c15", name: "Justine", role: "attendant", status: "assigned", phone: "555-0115" },
 ];
 
+// Helper to generate passengers
+const generatePassengers = (count: number): Passenger[] => {
+  const names = ["Chodor, Benjamin", "Stewart, Katrina", "Brumlik, John", "Cordova, Paola", "Boyce, Brent", "Mancini, Jeff", "Penuel, Brad", "Montague, Mark", "Arnao, Byron", "Gonzalez, Angel", "Gomberg, Maxwell", "Kernan, Jim", "Giamatteo, John", "McGuckin, Joseph"];
+  return Array.from({ length: count }).map((_, i) => ({
+    id: `p-${Math.random().toString(36).substr(2, 9)}`,
+    name: names[Math.floor(Math.random() * names.length)],
+    confirmationCode: Math.floor(100000 + Math.random() * 900000).toString(),
+    type: "Adult",
+    status: "confirmed",
+    pickupStopId: "s1",
+    dropoffStopId: "s3",
+    seat: `1${String.fromCharCode(65 + i)}`,
+    notes: Math.random() > 0.9 ? "ADA" : undefined
+  }));
+};
+
+// Helper to generate stops
+const generateStops = (startTime: Date): Stop[] => [
+  { id: "s1", name: "East Hampton", time: startTime, type: "pickup", status: "open" },
+  { id: "s2", name: "Southampton", time: addMinutes(startTime, 30), type: "pickup", status: "open" },
+  { id: "s3", name: "Manorville", time: addMinutes(startTime, 60), type: "both", status: "open" },
+  { id: "s4", name: "NYC - 40th & 3rd", time: addMinutes(startTime, 150), type: "dropoff", status: "open" },
+];
+
 // Helper to create trips easily
-const createTrip = (id: string, packId: string, route: string, vehicleId: string | null, driverId: string | null, attendantId: string | null): Trip => ({
-  id,
-  packId,
-  route,
-  direction: "westbound", // Default
-  departureTime: addHours(today, 6 + Math.random() * 12),
-  arrivalTime: addHours(today, 8 + Math.random() * 12),
-  vehicleId,
-  driverIds: driverId ? [driverId] : [],
-  attendantIds: attendantId ? [attendantId] : [],
-  passengerCount: Math.floor(Math.random() * 40),
-  status: "scheduled"
-});
+const createTrip = (id: string, packId: string, route: string, vehicleId: string | null, driverId: string | null, attendantId: string | null): Trip => {
+  const departureTime = addHours(today, 6 + Math.random() * 12);
+  const capacity = 54;
+  const passengerCount = Math.floor(Math.random() * 40);
+  
+  return {
+    id,
+    packId,
+    route,
+    direction: "westbound", // Default
+    departureTime,
+    arrivalTime: addHours(today, 8 + Math.random() * 12),
+    vehicleId,
+    driverIds: driverId ? [driverId] : [],
+    attendantIds: attendantId ? [attendantId] : [],
+    passengerCount,
+    capacity,
+    reservedCount: passengerCount,
+    status: "scheduled",
+    hasAda: Math.random() > 0.8,
+    passengers: generatePassengers(passengerCount),
+    stops: generateStops(departureTime)
+  };
+};
 
 // Interleaved trips to match the Left/Right column logic in PaperLineup
 // Left 1, Right 1, Left 2, Right 2, etc.
