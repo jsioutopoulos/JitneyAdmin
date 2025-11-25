@@ -328,6 +328,10 @@ const getCleanTripId = (id: string): string => {
 };
 
 const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: ResourceType, id: string) => void }) => {
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [filter, setFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
   // Flatten trips into individual card items
   const cardItems = trips.flatMap(t => {
     if (t.legs && t.legs.length > 0) {
@@ -355,129 +359,188 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
       return 'Open';
   };
 
+  // Filter items
+  const filteredItems = cardItems.filter(item => {
+    const matchesSearch = 
+        item.id.toLowerCase().includes(filter.toLowerCase()) ||
+        item.parent.route.toLowerCase().includes(filter.toLowerCase()) ||
+        item.rawId.toLowerCase().includes(filter.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || getDisplayStatus(item.status).toLowerCase() === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <div className="p-6 h-full overflow-hidden flex flex-col bg-muted/10">
-      <div className="flex-1 overflow-auto">
-        <div className="flex flex-col space-y-3 p-1 max-w-5xl mx-auto">
-            {cardItems.map((item, idx) => (
-                <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex items-center p-3 gap-4 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
-                    
-                    {/* 1. ID & Status Block */}
-                    <div className="w-28 shrink-0 flex flex-col gap-2">
-                        <span className="text-3xl font-bold font-mono tracking-tighter text-primary leading-none">
-                            {item.id}
-                        </span>
-                        
-                        <Popover>
-                            <PopoverTrigger asChild>
+    <div className="h-full overflow-hidden flex flex-col bg-muted/10">
+      {/* Toolbar */}
+      <div className="bg-background border-b p-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+            <div className="relative max-w-sm w-full">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search trips..." 
+                    className="pl-8 h-9" 
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                />
+            </div>
+            <div className="flex items-center bg-muted/50 rounded-lg p-1">
+                {['all', 'open', 'closed', 'cancelled'].map(status => (
+                    <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={cn(
+                            "px-3 py-1 text-xs font-medium rounded-md capitalize transition-all",
+                            statusFilter === status ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        {status}
+                    </button>
+                ))}
+            </div>
+        </div>
+        
+        <div className="flex items-center bg-muted/50 rounded-lg p-1">
+            <button
+                onClick={() => setView('grid')}
+                className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    view === 'grid' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+                onClick={() => setView('list')}
+                className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    view === 'list' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                <List className="h-4 w-4" />
+            </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4">
+        {view === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredItems.map((item, idx) => (
+                    <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex flex-col p-3 gap-3 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
+                        <div className="flex items-start justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-2xl font-bold font-mono tracking-tighter text-primary leading-none">
+                                    {item.id}
+                                </span>
                                 <Badge variant="outline" className={cn(
-                                    "w-fit text-[10px] font-bold uppercase h-5 px-1.5 border cursor-pointer hover:opacity-80 flex items-center gap-1",
+                                    "w-fit mt-1 text-[9px] font-bold uppercase h-4 px-1 border",
                                     getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
                                     getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
                                     getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
                                 )}>
                                     {getDisplayStatus(item.status)}
-                                    <ChevronDown className="h-2 w-2 opacity-50" />
                                 </Badge>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-32 p-1" align="start">
-                                <div className="flex flex-col gap-1">
-                                    <Button variant="ghost" size="sm" className="h-7 text-xs justify-start text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50">
-                                        Open
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-7 text-xs justify-start text-gray-600 hover:text-gray-700 hover:bg-gray-50">
-                                        Closed
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-7 text-xs justify-start text-red-700 hover:text-red-800 hover:bg-red-50">
-                                        Cancelled
-                                    </Button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-
-                    {/* Separator */}
-                    <div className="h-12 w-px bg-border/50 shrink-0" />
-
-                    {/* 2. Route Info Block */}
-                    <div className="flex-1 min-w-[180px] flex flex-col justify-center">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 px-1.5 py-0.5 rounded">
-                                {item.direction}
-                            </span>
-                            {item.parent.hasAda && <Accessibility className="h-3.5 w-3.5 text-blue-500" />}
-                        </div>
-                        <div className="text-sm font-semibold truncate text-foreground/90" title={item.parent.route}>
-                            {item.parent.route}
-                        </div>
-                    </div>
-
-                    {/* Separator */}
-                    <div className="h-12 w-px bg-border/50 shrink-0 hidden lg:block" />
-
-                     {/* 3. Capacity & Time Block */}
-                     <div className="w-40 shrink-0 flex flex-col items-end justify-center gap-1.5">
-                        <div className="flex flex-col items-end w-full">
-                            <div className="flex items-center gap-2 mb-1 w-full justify-end group/capacity">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <span className="text-[10px] text-muted-foreground font-medium cursor-pointer hover:text-primary hover:underline decoration-dashed underline-offset-2 flex items-center gap-1">
-                                            {item.parent.reservedCount} / {item.parent.capacity}
-                                            <Edit className="h-2 w-2 opacity-0 group-hover/capacity:opacity-100 transition-opacity" />
-                                        </span>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-48 p-3">
-                                        <div className="space-y-2">
-                                            <h4 className="font-medium text-xs uppercase text-muted-foreground">Update Capacity</h4>
-                                            <div className="flex gap-2">
-                                                <Input type="number" defaultValue={item.parent.capacity} className="h-8 text-xs" />
-                                                <Button size="sm" className="h-8">Save</Button>
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-
-                                <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
-                                    <div 
-                                        className={cn(
-                                            "h-full rounded-full transition-all",
-                                            (item.parent.reservedCount / item.parent.capacity) > 0.9 ? "bg-red-500" : 
-                                            (item.parent.reservedCount / item.parent.capacity) > 0.7 ? "bg-amber-500" : "bg-emerald-500"
-                                        )}
-                                        style={{ width: `${Math.min(100, (item.parent.reservedCount / item.parent.capacity) * 100)}%` }}
-                                    />
-                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className="font-mono font-medium text-sm block">
+                                    {format(item.parent.departureTime, "HH:mm")}
+                                </span>
+                                <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Dep</span>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <span className="font-mono font-medium text-sm block">
-                                {format(item.parent.departureTime, "HH:mm")}
-                            </span>
-                            <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Departure</span>
+
+                        <div className="flex-1 min-h-[40px]">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 px-1.5 py-0.5 rounded">
+                                    {item.direction}
+                                </span>
+                                {item.parent.hasAda && <Accessibility className="h-3 w-3 text-blue-500" />}
+                            </div>
+                            <div className="text-xs font-semibold line-clamp-2 text-foreground/90" title={item.parent.route}>
+                                {item.parent.route}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Separator */}
-                    <div className="h-12 w-px bg-border/50 shrink-0" />
-
-                    {/* 4. Actions Block */}
-                    <div className="flex items-center gap-2 shrink-0">
-                         <div className="flex flex-col gap-1">
-                             <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('reservations', item.parent.id)}>
-                                Reservations
-                             </Button>
-                             <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('stops', item.parent.id)}>
-                                Stops
-                             </Button>
-                             <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('seats', item.parent.id)}>
-                                Seats
-                             </Button>
-                         </div>
-                    </div>
-
-                </Card>
-            ))}
-        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                             <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-xs font-mono text-muted-foreground">
+                                    {item.parent.reservedCount}/{item.parent.capacity}
+                                </span>
+                             </div>
+                             
+                             <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAction('trip', item.parent.id)}>
+                                    <List className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAction('seats', item.parent.id)}>
+                                    <LayoutGrid className="h-3 w-3" />
+                                </Button>
+                             </div>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        ) : (
+            <div className="bg-card rounded-md border shadow-sm overflow-hidden">
+                <Table>
+                    <TableHeader className="bg-muted/50">
+                        <TableRow>
+                            <TableHead className="w-[100px]">Trip ID</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
+                            <TableHead className="w-[100px]">Time</TableHead>
+                            <TableHead>Route</TableHead>
+                            <TableHead className="w-[100px]">Capacity</TableHead>
+                            <TableHead className="w-[150px]">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredItems.map((item, idx) => (
+                            <TableRow key={`${item.parent.id}-${item.id}-${idx}`} className="group hover:bg-muted/5">
+                                <TableCell className="font-medium">
+                                    <span className="font-mono text-base font-bold text-primary">{item.id}</span>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant="outline" className={cn(
+                                        "w-fit text-[10px] font-bold uppercase h-5 px-1.5 border",
+                                        getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                        getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
+                                        getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
+                                    )}>
+                                        {getDisplayStatus(item.status)}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                    {format(item.parent.departureTime, "HH:mm")}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-medium truncate max-w-[200px]">{item.parent.route}</span>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[9px] text-muted-foreground uppercase">{item.direction}</span>
+                                            {item.parent.hasAda && <Accessibility className="h-3 w-3 text-blue-500" />}
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Users className="h-3.5 w-3.5" />
+                                        {item.parent.reservedCount}/{item.parent.capacity}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => onAction('trip', item.parent.id)}>Manifest</Button>
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => onAction('stops', item.parent.id)}>Stops</Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        )}
       </div>
     </div>
   )
