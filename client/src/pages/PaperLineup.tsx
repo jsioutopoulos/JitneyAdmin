@@ -187,7 +187,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
   onChange: (ids: string[]) => void, 
   placeholder: string,
   icon: any,
-  onResourceRightClick?: (id: string, type: ResourceType) => void,
+  onResourceRightClick?: (e: React.MouseEvent, id: string, type: ResourceType) => void,
   onResourceClick?: (id: string, type: ResourceType) => void,
   onEmptyContextMenu?: (e: React.MouseEvent) => void
 }) => {
@@ -216,7 +216,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                   onContextMenu={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    onResourceRightClick?.(item.id, item.role || 'driver');
+                    onResourceRightClick?.(e, item.id, item.role || 'driver');
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1438,7 +1438,7 @@ export default function HybridLineup() {
                                       onChange={(ids) => handleUpdateTrip(row.left!.id, 'vehicleId', ids[0] || null)}
                                       placeholder="Bus"
                                       icon={Bus}
-                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
+                                      onResourceRightClick={(e, id, type) => handleContextMenu(e, 'vehicle', id)}
                                       onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
                                       onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                     />
@@ -1457,7 +1457,7 @@ export default function HybridLineup() {
                                         onChange={(ids) => handleUpdateTrip(row.left!.id, 'driverIds', ids)}
                                         placeholder="Drivers"
                                         icon={User}
-                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
+                                        onResourceRightClick={(e, id, type) => handleContextMenu(e, 'driver', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('driver', id)}
                                         onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                       />
@@ -1473,7 +1473,7 @@ export default function HybridLineup() {
                                         onChange={(ids) => handleUpdateTrip(row.left!.id, 'attendantIds', ids)}
                                         placeholder="Attendants"
                                         icon={Shield}
-                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
+                                        onResourceRightClick={(e, id, type) => handleContextMenu(e, 'attendant', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
                                         onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                       />
@@ -1565,7 +1565,7 @@ export default function HybridLineup() {
                                       onChange={(ids) => handleUpdateTrip(row.right!.id, 'vehicleId', ids[0] || null)}
                                       placeholder="Bus"
                                       icon={Bus}
-                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
+                                      onResourceRightClick={(e, id, type) => handleContextMenu(e, 'vehicle', id)}
                                       onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
                                       onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                     />
@@ -1584,7 +1584,7 @@ export default function HybridLineup() {
                                         onChange={(ids) => handleUpdateTrip(row.right!.id, 'driverIds', ids)}
                                         placeholder="Drivers"
                                         icon={User}
-                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
+                                        onResourceRightClick={(e, id, type) => handleContextMenu(e, 'driver', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('driver', id)}
                                         onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                       />
@@ -1600,7 +1600,7 @@ export default function HybridLineup() {
                                         onChange={(ids) => handleUpdateTrip(row.right!.id, 'attendantIds', ids)}
                                         placeholder="Attendants"
                                         icon={Shield}
-                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
+                                        onResourceRightClick={(e, id, type) => handleContextMenu(e, 'attendant', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
                                         onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                       />
