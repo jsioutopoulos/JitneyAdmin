@@ -83,7 +83,15 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
 
   const displayName = 'name' in resource ? resource.name : (resource as Vehicle).plate;
   // For vehicles, use 'capacity' as subtext; for crew, use 'role'
-  const subText = 'plate' in resource ? `Cap: ${(resource as Vehicle).capacity}` : (resource as Crew).role;
+  // Add report time for crew
+  let subText = '';
+  if ('plate' in resource) {
+    subText = `Cap: ${(resource as Vehicle).capacity}`;
+  } else {
+    const crew = resource as Crew;
+    subText = `${crew.role} • ${crew.reportTime ? format(crew.reportTime, 'HH:mm') : '--:--'}`;
+  }
+  
   const status = resource.status;
 
   return (
@@ -130,13 +138,14 @@ const DroppableCell = ({ id, children, accept, isOver }: { id: string, children:
 };
 
 // Multi-select Component for Drivers/Attendants
-const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon, onResourceRightClick }: { 
+const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon, onResourceRightClick, onResourceClick }: { 
   values: string[], 
   options: any[], 
   onChange: (ids: string[]) => void, 
   placeholder: string,
   icon: any,
-  onResourceRightClick?: (id: string, type: ResourceType) => void
+  onResourceRightClick?: (id: string, type: ResourceType) => void,
+  onResourceClick?: (id: string, type: ResourceType) => void
 }) => {
   const [open, setOpen] = useState(false);
   
@@ -165,7 +174,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                 <Badge 
                   key={item.id} 
                   variant="secondary" 
-                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-context-menu transition-colors group/badge" 
+                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-context-menu transition-colors group/badge select-none" 
                   onContextMenu={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -173,6 +182,11 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (onResourceClick) {
+                        onResourceClick(item.id, item.role || 'driver');
+                    } else {
+                         // If no click handler, maybe toggle open? No, let popover trigger handle background clicks
+                    }
                   }}
                 >
                   {item.name}
@@ -841,6 +855,12 @@ export default function HybridLineup() {
     if (drawerContent.type === 'stops') {
         const trip = localTrips.find(t => t.id === drawerContent.id);
         if (!trip) return null;
+        
+        // Sort stops: Pickups first, then Dropoffs. Within each, sorted by time.
+        // "both" types can be considered pickups for this logic or separate. Let's put them with pickups.
+        const pickups = trip.stops.filter(s => s.type === 'pickup' || s.type === 'both').sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+        const dropoffs = trip.stops.filter(s => s.type === 'dropoff').sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
         return (
             <div className="space-y-4 h-full flex flex-col">
                 <div>
@@ -851,49 +871,112 @@ export default function HybridLineup() {
                     <p className="text-sm text-muted-foreground">Manage stop status and vehicle assignments</p>
                 </div>
 
-                <div className="space-y-2 flex-1 overflow-auto">
-                    {trip.stops.map((stop, idx) => (
-                        <Card key={stop.id} className="p-4 border-l-4 border-l-primary">
-                            <div className="flex items-start justify-between mb-4">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="text-[10px] font-mono h-5 px-1">
-                                            {format(stop.time, "HH:mm")}
-                                        </Badge>
-                                        <h3 className="font-bold">{stop.name}</h3>
+                <div className="space-y-6 flex-1 overflow-auto">
+                    {/* Pickups Section */}
+                    {pickups.length > 0 && (
+                        <div className="space-y-3">
+                             <h3 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                Pickups
+                             </h3>
+                             {pickups.map((stop) => (
+                                <Card key={stop.id} className="p-4 border-l-4 border-l-emerald-500">
+                                    {/* Stop content same as before */}
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-[10px] font-mono h-5 px-1">
+                                                    {format(stop.time, "HH:mm")}
+                                                </Badge>
+                                                <h3 className="font-bold">{stop.name}</h3>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground capitalize mt-1">{stop.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button 
+                                                size="sm" 
+                                                variant={stop.status === 'open' ? 'default' : 'outline'}
+                                                className={cn("h-7 text-xs", stop.status === 'open' ? "bg-emerald-600 hover:bg-emerald-700" : "text-muted-foreground")}
+                                                onClick={() => toggleStop(trip.id, stop.id)}
+                                            >
+                                                {stop.status === 'open' ? 'Open' : 'Closed'}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground capitalize mt-1">{stop.type}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button 
-                                        size="sm" 
-                                        variant={stop.status === 'open' ? 'default' : 'outline'}
-                                        className={cn("h-7 text-xs", stop.status === 'open' ? "bg-emerald-600 hover:bg-emerald-700" : "text-muted-foreground")}
-                                        onClick={() => toggleStop(trip.id, stop.id)}
-                                    >
-                                        {stop.status === 'open' ? 'Open' : 'Closed'}
-                                    </Button>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-muted/20 p-3 rounded-md">
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block">Assigned Vehicle</label>
-                                <div className="flex items-center gap-2">
-                                    <Bus className="h-4 w-4 text-muted-foreground" />
-                                    <select 
-                                        className="flex-1 h-8 text-sm bg-background border border-input rounded px-2"
-                                        value={stop.assignedVehicleId || ""}
-                                        onChange={(e) => assignStopVehicle(trip.id, stop.id, e.target.value)}
-                                    >
-                                        <option value="">-- Default ({vehicles.find(v => v.id === trip.vehicleId)?.name || 'Unassigned'}) --</option>
-                                        {vehicles.map(v => (
-                                            <option key={v.id} value={v.id}>{v.name} ({v.plate})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
+                                    
+                                    <div className="bg-muted/20 p-3 rounded-md">
+                                        <label className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block">Assigned Vehicle</label>
+                                        <div className="flex items-center gap-2">
+                                            <Bus className="h-4 w-4 text-muted-foreground" />
+                                            <select 
+                                                className="flex-1 h-8 text-sm bg-background border border-input rounded px-2"
+                                                value={stop.assignedVehicleId || ""}
+                                                onChange={(e) => assignStopVehicle(trip.id, stop.id, e.target.value)}
+                                            >
+                                                <option value="">-- Default ({vehicles.find(v => v.id === trip.vehicleId)?.name || 'Unassigned'}) --</option>
+                                                {vehicles.map(v => (
+                                                    <option key={v.id} value={v.id}>{v.name} ({v.plate})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </Card>
+                             ))}
+                        </div>
+                    )}
+
+                    {/* Dropoffs Section */}
+                    {dropoffs.length > 0 && (
+                        <div className="space-y-3">
+                             <h3 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-amber-500" />
+                                Dropoffs
+                             </h3>
+                             {dropoffs.map((stop) => (
+                                <Card key={stop.id} className="p-4 border-l-4 border-l-amber-500">
+                                    {/* Stop content same as before */}
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-[10px] font-mono h-5 px-1">
+                                                    {format(stop.time, "HH:mm")}
+                                                </Badge>
+                                                <h3 className="font-bold">{stop.name}</h3>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground capitalize mt-1">{stop.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button 
+                                                size="sm" 
+                                                variant={stop.status === 'open' ? 'default' : 'outline'}
+                                                className={cn("h-7 text-xs", stop.status === 'open' ? "bg-emerald-600 hover:bg-emerald-700" : "text-muted-foreground")}
+                                                onClick={() => toggleStop(trip.id, stop.id)}
+                                            >
+                                                {stop.status === 'open' ? 'Open' : 'Closed'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-muted/20 p-3 rounded-md">
+                                        <label className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block">Assigned Vehicle</label>
+                                        <div className="flex items-center gap-2">
+                                            <Bus className="h-4 w-4 text-muted-foreground" />
+                                            <select 
+                                                className="flex-1 h-8 text-sm bg-background border border-input rounded px-2"
+                                                value={stop.assignedVehicleId || ""}
+                                                onChange={(e) => assignStopVehicle(trip.id, stop.id, e.target.value)}
+                                            >
+                                                <option value="">-- Default ({vehicles.find(v => v.id === trip.vehicleId)?.name || 'Unassigned'}) --</option>
+                                                {vehicles.map(v => (
+                                                    <option key={v.id} value={v.id}>{v.name} ({v.plate})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </Card>
+                             ))}
+                        </div>
+                    )}
                 </div>
             </div>
         )
@@ -1269,6 +1352,7 @@ export default function HybridLineup() {
                                       placeholder="Bus"
                                       icon={Bus}
                                       onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
+                                      onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -1286,6 +1370,7 @@ export default function HybridLineup() {
                                         placeholder="Drivers"
                                         icon={User}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
+                                        onResourceClick={(id, type) => handleDrawerAction('driver', id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1300,6 +1385,7 @@ export default function HybridLineup() {
                                         placeholder="Attendants"
                                         icon={Shield}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
+                                        onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1390,6 +1476,7 @@ export default function HybridLineup() {
                                       placeholder="Bus"
                                       icon={Bus}
                                       onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
+                                      onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -1407,6 +1494,7 @@ export default function HybridLineup() {
                                         placeholder="Drivers"
                                         icon={User}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
+                                        onResourceClick={(id, type) => handleDrawerAction('driver', id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1421,6 +1509,7 @@ export default function HybridLineup() {
                                         placeholder="Attendants"
                                         icon={Shield}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
+                                        onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
                                       />
                                     </DroppableCell>
                                   )}
