@@ -244,131 +244,150 @@ const EditableText = ({ value, onChange, className, onContextMenu }: { value: st
   );
 };
 
+// Clean trip ID helper
+const getCleanTripId = (id: string): string => {
+  // Remove common suffixes and clean up
+  return id.replace(/sg|trans|\/|\+|\s+/gi, '').replace(/[^0-9]/g, '');
+};
+
 const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
+  // Flatten trips into individual card items
+  const cardItems = trips.flatMap(t => {
+    if (t.legs && t.legs.length > 0) {
+      return t.legs.map(l => ({
+        id: getCleanTripId(l.id) || l.id, // Use clean ID or fallback
+        rawId: l.id,
+        status: l.status,
+        direction: l.direction,
+        parent: t
+      }));
+    }
+    // If no legs but packId exists (e.g. "1sg trans"), try to clean it
+    // or if it's a complex string we might want to split it if it implies multiple trips, 
+    // but for now let's just clean the main ID if it looks like a single trip with suffix
+    // The user said "individual trip numbers", so "1sg trans" -> "1"
+    return [{
+      id: getCleanTripId(t.packId || t.id) || t.id,
+      rawId: t.packId || t.id,
+      status: t.status,
+      direction: t.direction,
+      parent: t
+    }];
+  });
+
   return (
-    <div className="p-6 h-full overflow-hidden flex flex-col">
-      <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md">
-        <CardHeader className="px-6 py-4 border-b bg-muted/5 shrink-0">
-            <div className="flex items-center justify-between">
-                <div>
-                    <CardTitle className="text-xl font-bold tracking-tight">Active Trips</CardTitle>
-                    <CardDescription>Real-time monitoring of all scheduled, active, and completed trips.</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search trips..." className="pl-8 w-[250px] bg-background" />
-                    </div>
-                    <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon"><Settings className="h-4 w-4" /></Button>
-                    <Button className="bg-primary text-primary-foreground shadow-sm gap-2">
-                        <Plus className="h-4 w-4" /> New Trip
-                    </Button>
-                </div>
-            </div>
-        </CardHeader>
-        <div className="flex-1 overflow-auto bg-card">
-            <Table>
-                <TableHeader className="bg-muted/5 sticky top-0 z-10 shadow-sm">
-                    <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[100px] font-bold">Trip ID</TableHead>
-                        <TableHead className="w-[180px] font-bold">Route</TableHead>
-                        <TableHead className="w-[120px] font-bold">Status</TableHead>
-                        <TableHead className="font-bold">Vehicle</TableHead>
-                        <TableHead className="font-bold">Crew</TableHead>
-                        <TableHead className="text-right font-bold">Passengers</TableHead>
-                        <TableHead className="text-right font-bold">Time</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {trips.flatMap(t => t.legs ? t.legs.map(l => ({ ...l, parent: t })) : [{ id: t.id, status: t.status, direction: t.direction, parent: t }]).map((item) => (
-                        <TableRow key={`${item.parent.id}-${item.id}`} className="group hover:bg-muted/5 transition-colors">
-                            <TableCell className="font-mono font-medium text-primary">
-                                {item.id}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{item.parent.route}</span>
-                                    <span className="text-xs text-muted-foreground capitalize">{item.direction}</span>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <Badge variant="secondary" className={cn(
-                                    "font-medium capitalize shadow-sm border",
-                                    item.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
+    <div className="p-6 h-full overflow-hidden flex flex-col bg-muted/10">
+      <div className="flex-1 overflow-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
+            {cardItems.map((item, idx) => (
+                <Card key={`${item.parent.id}-${item.id}-${idx}`} className="overflow-hidden hover:shadow-md transition-shadow border-border/60">
+                    <div className="flex flex-col h-full">
+                        {/* Header */}
+                        <div className="p-3 border-b bg-muted/10 flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl font-bold font-mono tracking-tighter text-primary">
+                                    {item.id}
+                                </span>
+                                <Badge variant="outline" className={cn(
+                                    "text-[10px] font-normal capitalize h-5 px-1.5",
+                                    item.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200",
                                     item.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
                                     item.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
                                     item.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
                                 )}>
                                     {item.status}
                                 </Badge>
-                            </TableCell>
-                            <TableCell>
-                                {item.parent.vehicleId ? (
-                                    <div className="flex items-center gap-2">
-                                        <Bus className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-mono text-sm">
-                                            {vehicles.find(v => v.id === item.parent.vehicleId)?.plate}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <span className="text-muted-foreground italic text-xs">Unassigned</span>
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                    {item.parent.driverIds.length > 0 ? (
-                                        item.parent.driverIds.map(did => (
-                                            <Badge key={did} variant="outline" className="text-[10px] bg-background">
-                                                {crew.find(c => c.id === did)?.name.split(' ')[0]}
-                                            </Badge>
-                                        ))
+                            </div>
+                            <div className="text-right">
+                                <div className="font-mono font-medium text-sm">
+                                    {format(item.parent.departureTime, "HH:mm")}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground uppercase">Departs</div>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-3 space-y-3 flex-1">
+                            {/* Route Info */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{item.direction}</span>
+                                    {item.parent.hasAda && <Accessibility className="h-3 w-3 text-blue-500" />}
+                                </div>
+                                <div className="text-sm font-medium truncate" title={item.parent.route}>
+                                    {item.parent.route}
+                                </div>
+                            </div>
+
+                            <Separator className="bg-border/50" />
+
+                            {/* Vehicle & Crew */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Vehicle</span>
+                                    {item.parent.vehicleId ? (
+                                        <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded">
+                                            <Bus className="h-3 w-3 text-muted-foreground" />
+                                            <span className="font-mono text-xs font-medium">
+                                                {vehicles.find(v => v.id === item.parent.vehicleId)?.plate.split('-')[1]}
+                                            </span>
+                                        </div>
                                     ) : (
-                                        <span className="text-muted-foreground italic text-xs">No Driver</span>
+                                        <span className="text-xs text-muted-foreground italic">--</span>
                                     )}
                                 </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <div className="flex flex-col items-end">
-                                    <span className="font-bold text-sm tabular-nums">
-                                        {item.parent.reservedCount} / {item.parent.capacity}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground">
-                                        {Math.round((item.parent.reservedCount / item.parent.capacity) * 100)}% Full
-                                    </span>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Driver</span>
+                                    {item.parent.driverIds.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {item.parent.driverIds.slice(0, 1).map(did => (
+                                                <div key={did} className="flex items-center gap-1.5 bg-muted/20 p-1 rounded w-full overflow-hidden">
+                                                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                    <span className="text-xs font-medium truncate">
+                                                        {crew.find(c => c.id === did)?.name.split(' ')[0]}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {item.parent.driverIds.length > 1 && (
+                                                <Badge variant="secondary" className="h-5 px-1 text-[10px]">+{item.parent.driverIds.length - 1}</Badge>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground italic">--</span>
+                                    )}
                                 </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <div className="flex flex-col items-end">
-                                    <span className="font-medium tabular-nums text-sm">
-                                        {format(item.parent.departureTime, "HH:mm")}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground">
-                                        Est. Arr {format(item.parent.arrivalTime, "HH:mm")}
-                                    </span>
+                            </div>
+                            
+                            {/* Capacity Bar */}
+                            <div className="space-y-1 pt-1">
+                                <div className="flex justify-between text-[10px]">
+                                    <span className="text-muted-foreground">Capacity</span>
+                                    <span className="font-medium">{item.parent.reservedCount} / {item.parent.capacity}</span>
                                 </div>
-                            </TableCell>
-                            <TableCell>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                    <div 
+                                        className={cn(
+                                            "h-full rounded-full transition-all",
+                                            (item.parent.reservedCount / item.parent.capacity) > 0.9 ? "bg-red-500" : 
+                                            (item.parent.reservedCount / item.parent.capacity) > 0.7 ? "bg-amber-500" : "bg-emerald-500"
+                                        )}
+                                        style={{ width: `${Math.min(100, (item.parent.reservedCount / item.parent.capacity) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-2 border-t bg-muted/5 flex justify-between items-center">
+                            <Button variant="ghost" size="sm" className="h-7 w-full text-xs text-muted-foreground hover:text-primary">
+                                View Details
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            ))}
         </div>
-        <div className="border-t p-4 bg-muted/5 flex items-center justify-between shrink-0">
-            <div className="text-xs text-muted-foreground">
-                Showing <strong>{trips.length}</strong> active trips
-            </div>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>Previous</Button>
-                <Button variant="outline" size="sm" disabled>Next</Button>
-            </div>
-        </div>
-      </Card>
+      </div>
     </div>
   )
 }
