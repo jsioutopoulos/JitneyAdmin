@@ -174,7 +174,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                 <Badge 
                   key={item.id} 
                   variant="secondary" 
-                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-context-menu transition-colors group/badge select-none" 
+                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-pointer transition-colors group/badge select-none" 
                   onContextMenu={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -858,8 +858,9 @@ export default function HybridLineup() {
         
         // Sort stops: Pickups first, then Dropoffs. Within each, sorted by time.
         // "both" types can be considered pickups for this logic or separate. Let's put them with pickups.
-        const pickups = trip.stops.filter(s => s.type === 'pickup' || s.type === 'both').sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-        const dropoffs = trip.stops.filter(s => s.type === 'dropoff').sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+        const getTime = (d: Date | string) => new Date(d).getTime();
+        const pickups = trip.stops.filter(s => s.type === 'pickup' || s.type === 'both').sort((a, b) => getTime(a.time) - getTime(b.time));
+        const dropoffs = trip.stops.filter(s => s.type === 'dropoff').sort((a, b) => getTime(a.time) - getTime(b.time));
 
         return (
             <div className="space-y-4 h-full flex flex-col">
@@ -1251,7 +1252,7 @@ export default function HybridLineup() {
                   <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5 shrink-0">
                     <div className="flex flex-col gap-1">
                         <h1 className="text-2xl font-bold tracking-tight text-primary">HAMPTON JITNEY</h1>
-                        <h2 className="text-lg font-medium text-muted-foreground tracking-wide">DAILY OPERATIONS LINEUP</h2>
+                        <h2 className="text-lg font-medium text-muted-foreground tracking-wide">DAILY OPERATIONS LINEUP (v2)</h2>
                     </div>
                     <div className="flex gap-8">
                         <div className="flex flex-col items-end">
