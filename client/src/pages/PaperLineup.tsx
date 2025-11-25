@@ -80,8 +80,9 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
     data: { type, id: resource.id, data: resource } as DraggableData,
   });
 
-  const displayName = 'name' in resource ? resource.name : resource.plate;
-  const subText = 'plate' in resource ? (resource as Vehicle).plate : (resource as Crew).role;
+  const displayName = 'name' in resource ? resource.name : (resource as Vehicle).plate;
+  // For vehicles, use 'capacity' as subtext; for crew, use 'role'
+  const subText = 'plate' in resource ? `Cap: ${(resource as Vehicle).capacity}` : (resource as Crew).role;
   const status = resource.status;
 
   return (
@@ -830,42 +831,39 @@ export default function HybridLineup() {
                           <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
                       </div>
                       {emptyRows.map((row, idx) => (
-                          <div key={`L-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
-                            {/* Trip ID / Time */}
-                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative p-1 gap-1">
+                          <div key={`L-${idx}`} className="flex min-h-[56px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                            {/* Trip ID */}
+                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-wrap justify-center items-center content-center p-2 gap-2">
                                 {row.left && row.left.legs && row.left.legs.length > 0 ? (
                                   // Render individual legs
                                   row.left.legs.map((leg, legIdx) => (
-                                    <div 
+                                    <Badge
                                       key={leg.id} 
+                                      variant="outline"
                                       className={cn(
-                                        "w-full text-center cursor-pointer hover:scale-105 transition-transform rounded px-1 border border-transparent hover:border-border/50",
-                                        leg.status === 'en-route' && "bg-blue-100/50 text-blue-700",
-                                        leg.status === 'completed' && "opacity-50 grayscale"
+                                        "cursor-pointer hover:bg-primary/10 transition-colors px-2 py-0.5 text-sm font-mono border-primary/20",
+                                        leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                        leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                        leg.status === 'scheduled' && "bg-background text-primary"
                                       )}
                                       onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
                                       onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
                                     >
-                                      <span className="text-xs font-bold text-primary">{leg.id}</span>
-                                    </div>
+                                      {leg.id}
+                                    </Badge>
                                   ))
                                 ) : row.left && (
                                   // Fallback for single leg
-                                   <>
-                                    <EditableText 
+                                   <EditableText 
                                       value={row.left.packId || row.left.id.toUpperCase()} 
                                       onChange={(val) => handleUpdateTrip(row.left!.id, 'packId', val)}
-                                      className="text-xs font-bold text-primary text-center"
+                                      className="text-sm font-bold text-primary text-center font-mono"
                                       onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                     />
-                                   </>
                                 )}
                                 
-                                {row.left && (
-                                  <div className="flex items-center gap-1 absolute bottom-0.5 left-0 right-0 justify-center pointer-events-none">
-                                    <span className="text-[10px] text-muted-foreground">{format(row.left.departureTime, "HH:mm")}</span>
-                                    {row.left.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
-                                  </div>
+                                {row.left && row.left.hasAda && (
+                                  <Accessibility className="h-3 w-3 text-blue-500 absolute top-1 right-1" />
                                 )}
                             </div>
                             
@@ -928,42 +926,39 @@ export default function HybridLineup() {
                           <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
                       </div>
                       {emptyRows.map((row, idx) => (
-                          <div key={`R-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
-                            {/* Trip ID / Time */}
-                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative p-1 gap-1">
+                          <div key={`R-${idx}`} className="flex min-h-[56px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                            {/* Trip ID */}
+                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-wrap justify-center items-center content-center p-2 gap-2">
                                 {row.right && row.right.legs && row.right.legs.length > 0 ? (
                                   // Render individual legs
                                   row.right.legs.map((leg, legIdx) => (
-                                    <div 
+                                    <Badge
                                       key={leg.id} 
+                                      variant="outline"
                                       className={cn(
-                                        "w-full text-center cursor-pointer hover:scale-105 transition-transform rounded px-1 border border-transparent hover:border-border/50",
-                                        leg.status === 'en-route' && "bg-blue-100/50 text-blue-700",
-                                        leg.status === 'completed' && "opacity-50 grayscale"
+                                        "cursor-pointer hover:bg-primary/10 transition-colors px-2 py-0.5 text-sm font-mono border-primary/20",
+                                        leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                        leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                        leg.status === 'scheduled' && "bg-background text-primary"
                                       )}
                                       onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
                                       onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
                                     >
-                                      <span className="text-xs font-bold text-primary">{leg.id}</span>
-                                    </div>
+                                      {leg.id}
+                                    </Badge>
                                   ))
                                 ) : row.right && (
                                   // Fallback for single leg
-                                   <>
-                                    <EditableText 
+                                   <EditableText 
                                       value={row.right.packId || row.right.id.toUpperCase()} 
                                       onChange={(val) => handleUpdateTrip(row.right!.id, 'packId', val)}
-                                      className="text-xs font-bold text-primary text-center"
+                                      className="text-sm font-bold text-primary text-center font-mono"
                                       onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                     />
-                                   </>
                                 )}
 
-                                {row.right && (
-                                  <div className="flex items-center gap-1 absolute bottom-0.5 left-0 right-0 justify-center pointer-events-none">
-                                    <span className="text-[10px] text-muted-foreground">{format(row.right.departureTime, "HH:mm")}</span>
-                                    {row.right.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
-                                  </div>
+                                {row.right && row.right.hasAda && (
+                                  <Accessibility className="h-3 w-3 text-blue-500 absolute top-1 right-1" />
                                 )}
                             </div>
                             
