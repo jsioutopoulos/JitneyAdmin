@@ -139,7 +139,7 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
             {!("plate" in resource) && (resource as Crew).reportTime && (
                 <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-mono font-medium opacity-80">
-                        {format((resource as Crew).reportTime, 'HH:mm')}
+                        {format((resource as Crew).reportTime!, 'HH:mm')}
                     </span>
                     
                     {(resource as Crew).reportDepot && (
@@ -267,7 +267,7 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                     )}
                 </div>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="start" sideOffset={5} alignOffset={-10} className="z-[60]">
+            <PopoverContent className="w-[200px] p-0 z-[60]" align="start" sideOffset={5} alignOffset={-10}>
                 <Command>
                 <CommandInput placeholder="Search..." className="h-8 text-xs" />
                 <CommandList>
@@ -379,7 +379,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
     
     // Determine Line
     let line = 'Montauk'; // Default
-    let lineColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'; // Default Green
+    let lineColor = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Default Green
 
     const r = trip.route.toLowerCase();
 
@@ -390,7 +390,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
             brand = 'Ambassador';
             brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
             line = 'Ambassador';
-            lineColor = 'text-blue-700 bg-blue-50 border-blue-200';
+            lineColor = 'bg-blue-100 text-blue-800 border-blue-200';
         }
     } 
     // Fallback to route heuristics
@@ -398,17 +398,17 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
         brand = 'Ambassador';
         brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
         line = 'Ambassador';
-        lineColor = 'text-blue-700 bg-blue-50 border-blue-200';
+        lineColor = 'bg-blue-100 text-blue-800 border-blue-200';
     }
 
     // If not Ambassador, determine line by route
     if (brand !== 'Ambassador') {
         if (r.includes('westhampton')) {
             line = 'Westhampton';
-            lineColor = 'text-yellow-700 bg-yellow-50 border-yellow-200';
+            lineColor = 'bg-yellow-100 text-yellow-800 border-yellow-200';
         } else if (r.includes('north fork') || r.includes('greenport')) {
             line = 'North Fork';
-            lineColor = 'text-purple-700 bg-purple-50 border-purple-200';
+            lineColor = 'bg-purple-100 text-purple-800 border-purple-200';
         }
     }
     
@@ -479,7 +479,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                             <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider border", brandColor)}>
                                 {brand}
                             </Badge>
-                            <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5 font-medium uppercase tracking-wide border bg-opacity-50", lineColor)}>
+                            <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5 font-medium uppercase tracking-wide border", lineColor)}>
                                 {line}
                             </Badge>
                         </div>
@@ -563,7 +563,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                                         <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-bold uppercase tracking-wider border", brandColor)}>
                                             {brand}
                                         </Badge>
-                                        <Badge variant="secondary" className={cn("w-fit text-[9px] h-4 px-1 font-medium uppercase tracking-wide border bg-opacity-50", lineColor)}>
+                                        <Badge variant="secondary" className={cn("w-fit text-[9px] h-4 px-1 font-medium uppercase tracking-wide border", lineColor)}>
                                             {line}
                                         </Badge>
                                     </div>
