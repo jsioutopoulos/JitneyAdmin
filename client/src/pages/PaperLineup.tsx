@@ -7,7 +7,8 @@ import {
   Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, 
   History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone, 
   Star, Users, Accessibility, Package, Search, List, UserPlus,
-  MoreHorizontal, Bell, Settings, Filter, Clock, Circle, LayoutGrid, Table as TableIcon
+  MoreHorizontal, Bell, Settings, Filter, Clock, Circle, LayoutGrid, Table as TableIcon,
+  PanelLeftClose, PanelLeftOpen, Edit, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -290,14 +291,33 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                         <span className="text-3xl font-bold font-mono tracking-tighter text-primary leading-none">
                             {item.id}
                         </span>
-                        <Badge variant="outline" className={cn(
-                            "w-fit text-[10px] font-bold uppercase h-5 px-1.5 border",
-                            getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                            getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
-                            getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
-                        )}>
-                            {getDisplayStatus(item.status)}
-                        </Badge>
+                        
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Badge variant="outline" className={cn(
+                                    "w-fit text-[10px] font-bold uppercase h-5 px-1.5 border cursor-pointer hover:opacity-80 flex items-center gap-1",
+                                    getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                    getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
+                                    getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
+                                )}>
+                                    {getDisplayStatus(item.status)}
+                                    <ChevronDown className="h-2 w-2 opacity-50" />
+                                </Badge>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-32 p-1" align="start">
+                                <div className="flex flex-col gap-1">
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs justify-start text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50">
+                                        Open
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs justify-start text-gray-600 hover:text-gray-700 hover:bg-gray-50">
+                                        Closed
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs justify-start text-red-700 hover:text-red-800 hover:bg-red-50">
+                                        Cancelled
+                                    </Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     {/* Separator */}
@@ -322,10 +342,25 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                      {/* 3. Capacity & Time Block */}
                      <div className="w-40 shrink-0 flex flex-col items-end justify-center gap-1.5">
                         <div className="flex flex-col items-end w-full">
-                            <div className="flex items-center gap-2 mb-1 w-full justify-end">
-                                <span className="text-[10px] text-muted-foreground font-medium">
-                                    {item.parent.reservedCount} / {item.parent.capacity}
-                                </span>
+                            <div className="flex items-center gap-2 mb-1 w-full justify-end group/capacity">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <span className="text-[10px] text-muted-foreground font-medium cursor-pointer hover:text-primary hover:underline decoration-dashed underline-offset-2 flex items-center gap-1">
+                                            {item.parent.reservedCount} / {item.parent.capacity}
+                                            <Edit className="h-2 w-2 opacity-0 group-hover/capacity:opacity-100 transition-opacity" />
+                                        </span>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-48 p-3">
+                                        <div className="space-y-2">
+                                            <h4 className="font-medium text-xs uppercase text-muted-foreground">Update Capacity</h4>
+                                            <div className="flex gap-2">
+                                                <Input type="number" defaultValue={item.parent.capacity} className="h-8 text-xs" />
+                                                <Button size="sm" className="h-8">Save</Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+
                                 <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
                                     <div 
                                         className={cn(
@@ -361,31 +396,6 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                              <Button variant="ghost" size="sm" className="h-6 text-[10px] justify-start px-2 w-24" onClick={() => onAction('seats', item.parent.id)}>
                                 Seats
                              </Button>
-                         </div>
-                         
-                         {/* Stop Status Controls */}
-                         <div className="flex flex-col gap-1 border-l pl-2 ml-1">
-                            <Button 
-                                variant={getDisplayStatus(item.status) === 'Open' ? 'default' : 'ghost'} 
-                                size="sm" 
-                                className={cn("h-5 text-[9px] w-16", getDisplayStatus(item.status) === 'Open' ? "bg-emerald-600 hover:bg-emerald-700" : "text-muted-foreground")}
-                            >
-                                Open
-                            </Button>
-                            <Button 
-                                variant={getDisplayStatus(item.status) === 'Closed' ? 'default' : 'ghost'} 
-                                size="sm" 
-                                className={cn("h-5 text-[9px] w-16", getDisplayStatus(item.status) === 'Closed' ? "bg-gray-600 hover:bg-gray-700" : "text-muted-foreground")}
-                            >
-                                Closed
-                            </Button>
-                            <Button 
-                                variant={getDisplayStatus(item.status) === 'Cancelled' ? 'default' : 'ghost'} 
-                                size="sm" 
-                                className={cn("h-5 text-[9px] w-16", getDisplayStatus(item.status) === 'Cancelled' ? "bg-red-600 hover:bg-red-700" : "text-muted-foreground")}
-                            >
-                                Cancelled
-                            </Button>
                          </div>
                     </div>
 
@@ -953,13 +963,13 @@ export default function HybridLineup() {
         <div className="h-full flex overflow-hidden">
           
           {/* LEFT SIDEBAR - RESOURCES */}
-          {sidebarOpen && (
+          {sidebarOpen ? (
             <div className="w-72 bg-background border-r border-border flex flex-col shadow-sm shrink-0 z-20">
               <div className="p-4 border-b border-border space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Resources</h2>
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSidebarOpen(false)}>
-                    <ChevronLeft className="h-4 w-4" />
+                    <PanelLeftClose className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="relative">
@@ -1062,6 +1072,28 @@ export default function HybridLineup() {
                   </div>
                 </div>
               </ScrollArea>
+            </div>
+          ) : (
+            // Collapsed Sidebar Rail
+            <div className="w-12 bg-background border-r border-border flex flex-col shadow-sm shrink-0 z-20 items-center py-4 gap-6">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(true)}>
+                    <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+                </Button>
+                <Separator />
+                <div className="flex flex-col gap-4">
+                    <div className="group relative flex justify-center" title="Vehicles">
+                        <Bus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{vehicles.length}</Badge>
+                    </div>
+                    <div className="group relative flex justify-center" title="Drivers">
+                        <User className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{crew.filter(c => c.role === 'driver').length}</Badge>
+                    </div>
+                    <div className="group relative flex justify-center" title="Attendants">
+                        <Shield className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{crew.filter(c => c.role === 'attendant').length}</Badge>
+                    </div>
+                </div>
             </div>
           )}
 
