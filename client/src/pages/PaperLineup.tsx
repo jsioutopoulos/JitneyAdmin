@@ -89,7 +89,8 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
     subText = `Cap: ${(resource as Vehicle).capacity}`;
   } else {
     const crew = resource as Crew;
-    subText = `${crew.role} • ${crew.reportTime ? format(crew.reportTime, 'HH:mm') : '--:--'}`;
+    // Format: Role • Time [Badge]
+    subText = `${crew.role}`;
   }
   
   const status = resource.status;
@@ -101,14 +102,28 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
       {...attributes}
       onContextMenu={onContextMenu}
       className={cn(
-        "flex items-center gap-2 p-2 cursor-grab hover:border-primary/50 transition-all select-none",
+        "flex items-center gap-2 p-2 cursor-grab hover:border-primary/50 transition-all select-none group relative",
         isDragging && "opacity-50",
         compact ? "p-1.5 text-xs rounded-md mb-1" : "mb-2"
       )}
     >
       <GripVertical className="h-4 w-4 text-muted-foreground/50" />
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{displayName}</div>
+        <div className="flex items-center justify-between">
+            <div className="font-medium truncate flex items-center gap-2">
+                {displayName}
+                {!("plate" in resource) && (resource as Crew).reportTime && (
+                    <span className="text-[10px] font-mono text-muted-foreground bg-muted/30 px-1 rounded">
+                        {format((resource as Crew).reportTime, 'HH:mm')}
+                    </span>
+                )}
+            </div>
+            {!("plate" in resource) && (resource as Crew).reportDepot && (
+                <Badge variant="outline" className="text-[9px] h-4 px-1 ml-1 border-muted-foreground/30 text-muted-foreground">
+                    {(resource as Crew).reportDepot.substring(0, 3).toUpperCase()}
+                </Badge>
+            )}
+        </div>
         {!compact && <div className="text-xs text-muted-foreground capitalize">{subText}</div>}
       </div>
       {status !== 'active' && status !== 'available' && (

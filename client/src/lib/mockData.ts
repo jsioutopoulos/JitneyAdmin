@@ -20,6 +20,7 @@ export interface Crew {
   status: "available" | "assigned" | "off-duty";
   phone: string;
   reportTime: Date;
+  reportDepot: "Southampton" | "Calverton" | "Manorville";
 }
 
 export interface Passenger {
@@ -88,21 +89,21 @@ export const vehicles: Vehicle[] = [
 ];
 
 export const crew: Crew[] = [
-  { id: "c1", name: "John Smith", role: "driver", status: "assigned", phone: "555-0101", reportTime: addHours(today, 5) },
-  { id: "c2", name: "Jane Doe", role: "driver", status: "available", phone: "555-0102", reportTime: addHours(today, 6) },
-  { id: "c3", name: "Mike Johnson", role: "driver", status: "off-duty", phone: "555-0103", reportTime: addHours(today, 5.5) },
-  { id: "c4", name: "Sarah Wilson", role: "attendant", status: "assigned", phone: "555-0104", reportTime: addHours(today, 6.5) },
-  { id: "c5", name: "Tom Brown", role: "driver", status: "available", phone: "555-0105", reportTime: addHours(today, 7) },
-  { id: "c6", name: "Emily Davis", role: "attendant", status: "available", phone: "555-0106", reportTime: addHours(today, 8) },
-  { id: "c7", name: "David Miller", role: "driver", status: "assigned", phone: "555-0107", reportTime: addHours(today, 5) },
-  { id: "c8", name: "Lisa Taylor", role: "attendant", status: "off-duty", phone: "555-0108", reportTime: addHours(today, 9) },
-  { id: "c9", name: "James Anderson", role: "attendant", status: "assigned", phone: "555-0109", reportTime: addHours(today, 6) },
-  { id: "c10", name: "Robert Thomas", role: "driver", status: "available", phone: "555-0110", reportTime: addHours(today, 10) },
-  { id: "c11", name: "Jennifer Jackson", role: "attendant", status: "available", phone: "555-0111", reportTime: addHours(today, 7.5) },
-  { id: "c12", name: "William White", role: "attendant", status: "assigned", phone: "555-0112", reportTime: addHours(today, 6) },
-  { id: "c13", name: "Charles Harris", role: "driver", status: "available", phone: "555-0113", reportTime: addHours(today, 5.5) },
-  { id: "c14", name: "Patricia Martin", role: "driver", status: "assigned", phone: "555-0114", reportTime: addHours(today, 6) },
-  { id: "c15", name: "Linda Thompson", role: "attendant", status: "assigned", phone: "555-0115", reportTime: addHours(today, 8) },
+  { id: "c1", name: "John Smith", role: "driver", status: "assigned", phone: "555-0101", reportTime: addHours(today, 5), reportDepot: "Southampton" },
+  { id: "c2", name: "Jane Doe", role: "driver", status: "available", phone: "555-0102", reportTime: addHours(today, 6), reportDepot: "Calverton" },
+  { id: "c3", name: "Mike Johnson", role: "driver", status: "off-duty", phone: "555-0103", reportTime: addHours(today, 5.5), reportDepot: "Manorville" },
+  { id: "c4", name: "Sarah Wilson", role: "attendant", status: "assigned", phone: "555-0104", reportTime: addHours(today, 6.5), reportDepot: "Southampton" },
+  { id: "c5", name: "Tom Brown", role: "driver", status: "available", phone: "555-0105", reportTime: addHours(today, 7), reportDepot: "Calverton" },
+  { id: "c6", name: "Emily Davis", role: "attendant", status: "available", phone: "555-0106", reportTime: addHours(today, 8), reportDepot: "Manorville" },
+  { id: "c7", name: "David Miller", role: "driver", status: "assigned", phone: "555-0107", reportTime: addHours(today, 5), reportDepot: "Southampton" },
+  { id: "c8", name: "Lisa Taylor", role: "attendant", status: "off-duty", phone: "555-0108", reportTime: addHours(today, 9), reportDepot: "Calverton" },
+  { id: "c9", name: "James Anderson", role: "attendant", status: "assigned", phone: "555-0109", reportTime: addHours(today, 6), reportDepot: "Manorville" },
+  { id: "c10", name: "Robert Thomas", role: "driver", status: "available", phone: "555-0110", reportTime: addHours(today, 10), reportDepot: "Southampton" },
+  { id: "c11", name: "Jennifer Jackson", role: "attendant", status: "available", phone: "555-0111", reportTime: addHours(today, 7.5), reportDepot: "Calverton" },
+  { id: "c12", name: "William White", role: "attendant", status: "assigned", phone: "555-0112", reportTime: addHours(today, 6), reportDepot: "Manorville" },
+  { id: "c13", name: "Charles Harris", role: "driver", status: "available", phone: "555-0113", reportTime: addHours(today, 5.5), reportDepot: "Southampton" },
+  { id: "c14", name: "Patricia Martin", role: "driver", status: "assigned", phone: "555-0114", reportTime: addHours(today, 6), reportDepot: "Calverton" },
+  { id: "c15", name: "Linda Thompson", role: "attendant", status: "assigned", phone: "555-0115", reportTime: addHours(today, 8), reportDepot: "Manorville" },
 ];
 
 // Helper to generate passengers
