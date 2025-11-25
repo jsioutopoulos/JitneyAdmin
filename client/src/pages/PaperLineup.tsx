@@ -262,10 +262,6 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
         parent: t
       }));
     }
-    // If no legs but packId exists (e.g. "1sg trans"), try to clean it
-    // or if it's a complex string we might want to split it if it implies multiple trips, 
-    // but for now let's just clean the main ID if it looks like a single trip with suffix
-    // The user said "individual trip numbers", so "1sg trans" -> "1"
     return [{
       id: getCleanTripId(t.packId || t.id) || t.id,
       rawId: t.packId || t.id,
@@ -278,93 +274,84 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
   return (
     <div className="p-6 h-full overflow-hidden flex flex-col bg-muted/10">
       <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
+        <div className="flex flex-col space-y-3 p-1 max-w-5xl mx-auto">
             {cardItems.map((item, idx) => (
-                <Card key={`${item.parent.id}-${item.id}-${idx}`} className="overflow-hidden hover:shadow-md transition-shadow border-border/60">
-                    <div className="flex flex-col h-full">
-                        {/* Header */}
-                        <div className="p-3 border-b bg-muted/10 flex justify-between items-start">
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl font-bold font-mono tracking-tighter text-primary">
-                                    {item.id}
-                                </span>
-                                <Badge variant="outline" className={cn(
-                                    "text-[10px] font-normal capitalize h-5 px-1.5",
-                                    item.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200",
-                                    item.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                    item.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
-                                    item.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
-                                )}>
-                                    {item.status}
-                                </Badge>
-                            </div>
-                            <div className="text-right">
-                                <div className="font-mono font-medium text-sm">
-                                    {format(item.parent.departureTime, "HH:mm")}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground uppercase">Departs</div>
-                            </div>
+                <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex items-center p-3 gap-4 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
+                    
+                    {/* 1. ID & Status Block */}
+                    <div className="w-28 shrink-0 flex flex-col gap-1.5">
+                        <span className="text-3xl font-bold font-mono tracking-tighter text-primary leading-none">
+                            {item.id}
+                        </span>
+                        <Badge variant="outline" className={cn(
+                            "w-fit text-[10px] font-normal capitalize h-5 px-1.5 border",
+                            item.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200",
+                            item.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            item.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
+                            item.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
+                        )}>
+                            {item.status}
+                        </Badge>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="h-10 w-px bg-border/50 shrink-0" />
+
+                    {/* 2. Route Info Block */}
+                    <div className="flex-1 min-w-[180px] flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 px-1.5 py-0.5 rounded">
+                                {item.direction}
+                            </span>
+                            {item.parent.hasAda && <Accessibility className="h-3.5 w-3.5 text-blue-500" />}
                         </div>
+                        <div className="text-sm font-semibold truncate text-foreground/90" title={item.parent.route}>
+                            {item.parent.route}
+                        </div>
+                    </div>
 
-                        {/* Body */}
-                        <div className="p-3 space-y-3 flex-1">
-                            {/* Route Info */}
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{item.direction}</span>
-                                    {item.parent.hasAda && <Accessibility className="h-3 w-3 text-blue-500" />}
-                                </div>
-                                <div className="text-sm font-medium truncate" title={item.parent.route}>
-                                    {item.parent.route}
-                                </div>
-                            </div>
-
-                            <Separator className="bg-border/50" />
-
-                            {/* Vehicle & Crew */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Vehicle</span>
-                                    {item.parent.vehicleId ? (
-                                        <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded">
-                                            <Bus className="h-3 w-3 text-muted-foreground" />
-                                            <span className="font-mono text-xs font-medium">
-                                                {vehicles.find(v => v.id === item.parent.vehicleId)?.plate.split('-')[1]}
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground italic">--</span>
+                     {/* 3. Resources Block */}
+                    <div className="w-48 shrink-0 flex flex-col gap-2 justify-center">
+                        {/* Vehicle */}
+                        <div className="flex items-center gap-2 text-xs">
+                             <Bus className="h-3.5 w-3.5 text-muted-foreground" />
+                             {item.parent.vehicleId ? (
+                                <span className="font-mono font-medium">
+                                    {vehicles.find(v => v.id === item.parent.vehicleId)?.plate}
+                                </span>
+                             ) : (
+                                <span className="text-muted-foreground italic">--</span>
+                             )}
+                        </div>
+                        {/* Driver */}
+                        <div className="flex items-center gap-2 text-xs">
+                             <User className="h-3.5 w-3.5 text-muted-foreground" />
+                             {item.parent.driverIds.length > 0 ? (
+                                <div className="flex items-center gap-1">
+                                    <span className="font-medium truncate max-w-[120px]">
+                                        {crew.find(c => c.id === item.parent.driverIds[0])?.name}
+                                    </span>
+                                    {item.parent.driverIds.length > 1 && (
+                                        <Badge variant="secondary" className="h-4 px-1 text-[9px] rounded-sm">+{item.parent.driverIds.length - 1}</Badge>
                                     )}
                                 </div>
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">Driver</span>
-                                    {item.parent.driverIds.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1">
-                                            {item.parent.driverIds.slice(0, 1).map(did => (
-                                                <div key={did} className="flex items-center gap-1.5 bg-muted/20 p-1 rounded w-full overflow-hidden">
-                                                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                                                    <span className="text-xs font-medium truncate">
-                                                        {crew.find(c => c.id === did)?.name.split(' ')[0]}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                            {item.parent.driverIds.length > 1 && (
-                                                <Badge variant="secondary" className="h-5 px-1 text-[10px]">+{item.parent.driverIds.length - 1}</Badge>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground italic">--</span>
-                                    )}
-                                </div>
-                            </div>
-                            
-                            {/* Capacity Bar */}
-                            <div className="space-y-1 pt-1">
-                                <div className="flex justify-between text-[10px]">
-                                    <span className="text-muted-foreground">Capacity</span>
-                                    <span className="font-medium">{item.parent.reservedCount} / {item.parent.capacity}</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                             ) : (
+                                <span className="text-muted-foreground italic">--</span>
+                             )}
+                        </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="h-10 w-px bg-border/50 shrink-0 hidden lg:block" />
+
+                    {/* 4. Capacity & Time Block */}
+                    <div className="w-40 shrink-0 flex flex-col items-end justify-center gap-1.5">
+                        <div className="flex flex-col items-end w-full">
+                            <div className="flex items-center gap-2 mb-1 w-full justify-end">
+                                <span className="text-[10px] text-muted-foreground font-medium">
+                                    {item.parent.reservedCount} / {item.parent.capacity}
+                                </span>
+                                <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
                                     <div 
                                         className={cn(
                                             "h-full rounded-full transition-all",
@@ -376,13 +363,19 @@ const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Footer Actions */}
-                        <div className="p-2 border-t bg-muted/5 flex justify-between items-center">
-                            <Button variant="ghost" size="sm" className="h-7 w-full text-xs text-muted-foreground hover:text-primary">
-                                View Details
-                            </Button>
+                        <div className="text-right">
+                            <span className="font-mono font-medium text-sm block">
+                                {format(item.parent.departureTime, "HH:mm")}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Departure</span>
                         </div>
+                    </div>
+
+                    {/* 5. Actions */}
+                    <div className="shrink-0 pl-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
                     </div>
                 </Card>
             ))}
