@@ -479,7 +479,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                             <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider border", brandColor)}>
                                 {brand}
                             </Badge>
-                            <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5 font-medium uppercase tracking-wide border", lineColor)}>
+                            <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-medium uppercase tracking-wide border", lineColor)}>
                                 {line}
                             </Badge>
                         </div>
@@ -563,7 +563,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                                         <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-bold uppercase tracking-wider border", brandColor)}>
                                             {brand}
                                         </Badge>
-                                        <Badge variant="secondary" className={cn("w-fit text-[9px] h-4 px-1 font-medium uppercase tracking-wide border", lineColor)}>
+                                        <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-medium uppercase tracking-wide border", lineColor)}>
                                             {line}
                                         </Badge>
                                     </div>

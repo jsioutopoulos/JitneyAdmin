@@ -182,15 +182,15 @@ export const trips: Trip[] = [
   createTrip("t2", "57 + 16", "NYC -> Montauk", "v8", "c14", "c15"),
   
   // Row 2
-  createTrip("t3", "1sg trans", "Shuttle", "v2", "c2", null),
-  createTrip("t4", "57/77", "NYC -> Hamptons", "v9", null, null),
+  createTrip("t3", "1sg trans", "Westhampton Shuttle", "v2", "c2", null),
+  createTrip("t4", "57/77", "NYC -> Westhampton", "v9", null, null),
 
   // Row 3
-  createTrip("t5", "32sg trans", "Shuttle", "v3", "c3", null),
-  createTrip("t6", "77 trans", "Transfer", "v10", null, null),
+  createTrip("t5", "32sg trans", "North Fork Shuttle", "v3", "c3", null),
+  createTrip("t6", "77 trans", "Greenport Transfer", "v10", null, null),
 
   // Row 4
-  createTrip("t7", "691/91 + 692", "Multi-leg", "v4", "c4", "c9"),
+  createTrip("t7", "691/91 + 692", "Ambassador - Multi-leg", "v4", "c4", "c9"),
   createTrip("t8", "263 + 236", "Express", "v11", "c5", null),
 
   // Row 5
@@ -206,11 +206,11 @@ export const trips: Trip[] = [
   createTrip("t14", "9sg + 10", "Special", null, null, null),
 
   // Row 8
-  createTrip("t15", "3sg trans", "Shuttle", "v7", "c8", null),
+  createTrip("t15", "3sg trans", "Westhampton -> NYC", "v7", "c8", null),
   createTrip("t16", "11 +", "Partial", "v6", "c10", null),
 
   // Row 9
-  createTrip("t17", "4sg trans", "Shuttle", null, "c9", null),
+  createTrip("t17", "4sg trans", "North Fork Express", null, "c9", null),
   createTrip("t18", "611 + 612", "Long Haul", "v4", null, null),
 
   // Row 10
