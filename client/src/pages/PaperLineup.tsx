@@ -831,27 +831,53 @@ export default function HybridLineup() {
                           <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
                       </div>
                       {emptyRows.map((row, idx) => (
-                          <div key={`L-${idx}`} className="flex min-h-[56px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                          <div key={`L-${idx}`} className="flex min-h-[48px] h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
                             {/* Trip ID */}
-                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-wrap justify-center items-center content-center p-2 gap-2">
+                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex items-center justify-center px-1 relative overflow-hidden">
                                 {row.left && row.left.legs && row.left.legs.length > 0 ? (
-                                  // Render individual legs
-                                  row.left.legs.map((leg, legIdx) => (
-                                    <Badge
-                                      key={leg.id} 
-                                      variant="outline"
-                                      className={cn(
-                                        "cursor-pointer hover:bg-primary/10 transition-colors px-2 py-0.5 text-sm font-mono border-primary/20",
-                                        leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                                        leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
-                                        leg.status === 'scheduled' && "bg-background text-primary"
-                                      )}
-                                      onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
-                                      onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
-                                    >
-                                      {leg.id}
-                                    </Badge>
-                                  ))
+                                  <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
+                                    {/* Westbound Legs */}
+                                    {row.left.legs.filter((l: TripLeg) => l.direction === 'westbound').map((leg: TripLeg) => (
+                                      <Badge
+                                        key={leg.id} 
+                                        variant="outline"
+                                        className={cn(
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
+                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                        )}
+                                        onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                        onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                      >
+                                        {leg.id}
+                                      </Badge>
+                                    ))}
+
+                                    {/* Separator if both directions exist */}
+                                    {row.left.legs.some((l: TripLeg) => l.direction === 'westbound') && 
+                                     row.left.legs.some((l: TripLeg) => l.direction === 'eastbound') && (
+                                      <span className="text-muted-foreground font-bold mx-0.5">+</span>
+                                    )}
+
+                                    {/* Eastbound Legs */}
+                                    {row.left.legs.filter((l: TripLeg) => l.direction === 'eastbound').map((leg: TripLeg) => (
+                                      <Badge
+                                        key={leg.id} 
+                                        variant="outline"
+                                        className={cn(
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
+                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                        )}
+                                        onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                        onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                      >
+                                        {leg.id}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 ) : row.left && (
                                   // Fallback for single leg
                                    <EditableText 
@@ -863,7 +889,7 @@ export default function HybridLineup() {
                                 )}
                                 
                                 {row.left && row.left.hasAda && (
-                                  <Accessibility className="h-3 w-3 text-blue-500 absolute top-1 right-1" />
+                                  <Accessibility className="h-2.5 w-2.5 text-blue-500 absolute top-1 right-1" />
                                 )}
                             </div>
                             
@@ -926,27 +952,53 @@ export default function HybridLineup() {
                           <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
                       </div>
                       {emptyRows.map((row, idx) => (
-                          <div key={`R-${idx}`} className="flex min-h-[56px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                          <div key={`R-${idx}`} className="flex min-h-[48px] h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
                             {/* Trip ID */}
-                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-wrap justify-center items-center content-center p-2 gap-2">
+                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex items-center justify-center px-1 relative overflow-hidden">
                                 {row.right && row.right.legs && row.right.legs.length > 0 ? (
-                                  // Render individual legs
-                                  row.right.legs.map((leg, legIdx) => (
-                                    <Badge
-                                      key={leg.id} 
-                                      variant="outline"
-                                      className={cn(
-                                        "cursor-pointer hover:bg-primary/10 transition-colors px-2 py-0.5 text-sm font-mono border-primary/20",
-                                        leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                                        leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
-                                        leg.status === 'scheduled' && "bg-background text-primary"
-                                      )}
-                                      onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
-                                      onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
-                                    >
-                                      {leg.id}
-                                    </Badge>
-                                  ))
+                                  <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
+                                    {/* Westbound Legs */}
+                                    {row.right.legs.filter((l: TripLeg) => l.direction === 'westbound').map((leg: TripLeg) => (
+                                      <Badge
+                                        key={leg.id} 
+                                        variant="outline"
+                                        className={cn(
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
+                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                        )}
+                                        onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                        onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                      >
+                                        {leg.id}
+                                      </Badge>
+                                    ))}
+
+                                    {/* Separator if both directions exist */}
+                                    {row.right.legs.some((l: TripLeg) => l.direction === 'westbound') && 
+                                     row.right.legs.some((l: TripLeg) => l.direction === 'eastbound') && (
+                                      <span className="text-muted-foreground font-bold mx-0.5">+</span>
+                                    )}
+
+                                    {/* Eastbound Legs */}
+                                    {row.right.legs.filter((l: TripLeg) => l.direction === 'eastbound').map((leg: TripLeg) => (
+                                      <Badge
+                                        key={leg.id} 
+                                        variant="outline"
+                                        className={cn(
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
+                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                        )}
+                                        onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                        onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                      >
+                                        {leg.id}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 ) : row.right && (
                                   // Fallback for single leg
                                    <EditableText 
@@ -958,7 +1010,7 @@ export default function HybridLineup() {
                                 )}
 
                                 {row.right && row.right.hasAda && (
-                                  <Accessibility className="h-3 w-3 text-blue-500 absolute top-1 right-1" />
+                                  <Accessibility className="h-2.5 w-2.5 text-blue-500 absolute top-1 right-1" />
                                 )}
                             </div>
                             
