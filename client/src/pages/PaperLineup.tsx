@@ -101,12 +101,10 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
         // Vehicle Coloring by Type
         const v = r as Vehicle;
         switch(v.type) {
-            case 'Jitney': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Green (51-54 pax)
+            case 'Coach': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Green (Jitneys & Coaches)
             case 'Ambassador': return 'border-amber-500 bg-amber-50/50 text-amber-900'; // Gold/Amber (30 pax)
-            case 'Coach': return 'border-blue-500 bg-blue-50/50 text-blue-900'; // Smaller Coaches (30-40)
             case 'Trolley': return 'border-red-500 bg-red-50/50 text-red-900'; // Trolley (~35 pax)
             case 'SCT': return 'border-purple-500 bg-purple-50/50 text-purple-900'; // Suffolk County Transit
-            case 'Charter': return 'border-slate-500 bg-slate-50/50 text-slate-900';
             default: return 'border-muted bg-muted/20';
         }
     } else {
