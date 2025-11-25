@@ -1381,7 +1381,10 @@ export default function HybridLineup() {
                                           // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
                                           // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
-                                        onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDrawerAction('trip', row.left!.id);
+                                        }}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
                                       >
                                         {leg.id}
@@ -1405,7 +1408,10 @@ export default function HybridLineup() {
                                           // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
                                           // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
-                                        onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDrawerAction('trip', row.left!.id);
+                                        }}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
                                       >
                                         {leg.id}
@@ -1505,7 +1511,10 @@ export default function HybridLineup() {
                                           // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
                                           // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
-                                        onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDrawerAction('trip', row.right!.id);
+                                        }}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
                                       >
                                         {leg.id}
@@ -1529,7 +1538,10 @@ export default function HybridLineup() {
                                           // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
                                           // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
-                                        onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDrawerAction('trip', row.right!.id);
+                                        }}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
                                       >
                                         {leg.id}

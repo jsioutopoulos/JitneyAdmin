@@ -74,16 +74,16 @@ export interface Trip {
 const today = startOfToday();
 
 export const vehicles: Vehicle[] = [
-  { id: "v1", name: "Jitney 101", type: "Coach", status: "active", capacity: 54, plate: "NY-J101" },
-  { id: "v2", name: "Jitney 102", type: "Coach", status: "active", capacity: 54, plate: "NY-J102" },
+  { id: "v1", name: "Coach 101", type: "Coach", status: "active", capacity: 54, plate: "NY-J101" },
+  { id: "v2", name: "Coach 102", type: "Coach", status: "active", capacity: 54, plate: "NY-J102" },
   { id: "v3", name: "Ambassador 201", type: "Ambassador", status: "active", capacity: 30, plate: "NY-A201" },
   { id: "v4", name: "Coach 401", type: "Coach", status: "active", capacity: 40, plate: "NY-C401" },
   { id: "v5", name: "Trolley 501", type: "Trolley", status: "active", capacity: 35, plate: "NY-T501" },
-  { id: "v6", name: "Jitney 103", type: "Coach", status: "active", capacity: 54, plate: "NY-J103" },
+  { id: "v6", name: "Coach 103", type: "Coach", status: "active", capacity: 54, plate: "NY-J103" },
   { id: "v7", name: "SCT 601", type: "SCT", status: "active", capacity: 45, plate: "NY-S601" },
   { id: "v8", name: "Ambassador 203", type: "Ambassador", status: "active", capacity: 30, plate: "NY-A203" },
-  { id: "v9", name: "Charter 302", type: "Coach", status: "active", capacity: 60, plate: "NY-C302" },
-  { id: "v10", name: "Jitney 105", type: "Coach", status: "active", capacity: 54, plate: "NY-J105" },
+  { id: "v9", name: "Coach 302", type: "Coach", status: "active", capacity: 60, plate: "NY-C302" },
+  { id: "v10", name: "Coach 105", type: "Coach", status: "active", capacity: 54, plate: "NY-J105" },
   { id: "v11", name: "Coach 402", type: "Coach", status: "active", capacity: 38, plate: "NY-C402" },
   { id: "v12", name: "Ambassador 204", type: "Ambassador", status: "active", capacity: 30, plate: "NY-A204" },
 ];
