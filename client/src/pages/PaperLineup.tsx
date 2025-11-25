@@ -651,9 +651,20 @@ export default function HybridLineup() {
     v.plate.toLowerCase().includes(resourceSearchQuery.toLowerCase())
   );
 
+  // Group Vehicles by Type
+  const groupedVehicles = filteredVehicles.reduce((acc, vehicle) => {
+      if (!acc[vehicle.type]) acc[vehicle.type] = [];
+      acc[vehicle.type].push(vehicle);
+      return acc;
+  }, {} as Record<string, Vehicle[]>);
+
   const filteredCrew = crew.filter(c => 
     c.name.toLowerCase().includes(resourceSearchQuery.toLowerCase())
   );
+
+  // Split Crew by Reporting vs Not Reporting
+  const reportingCrew = filteredCrew.filter(c => c.reportTime);
+  const notReportingCrew = filteredCrew.filter(c => !c.reportTime);
 
   // DnD Handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -1300,17 +1311,23 @@ export default function HybridLineup() {
                     </div>
                     
                     {!collapsedResources.vehicle && (
-                      <div className="space-y-1">
-                        {filteredVehicles.map((v: Vehicle) => (
-                          <DraggableResource 
-                            key={v.id} 
-                            resource={v} 
-                            type="vehicle" 
-                            compact 
-                            onContextMenu={(e) => handleContextMenu(e, 'vehicle', v.id)}
-                          />
-                        ))}
-                        {filteredVehicles.length === 0 && (
+                      <div className="space-y-4 pl-1">
+                        {Object.keys(groupedVehicles).length > 0 ? (
+                            Object.entries(groupedVehicles).map(([type, vehicles]) => (
+                                <div key={type} className="space-y-1">
+                                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider pl-1 mb-1">{type}s</h4>
+                                    {vehicles.map((v: Vehicle) => (
+                                        <DraggableResource 
+                                            key={v.id} 
+                                            resource={v} 
+                                            type="vehicle" 
+                                            compact 
+                                            onContextMenu={(e) => handleContextMenu(e, 'vehicle', v.id)}
+                                        />
+                                    ))}
+                                </div>
+                            ))
+                        ) : (
                           <p className="text-xs text-muted-foreground italic px-2">No vehicles found</p>
                         )}
                       </div>
@@ -1329,19 +1346,44 @@ export default function HybridLineup() {
                     </div>
 
                     {!collapsedResources.driver && (
-                      <div className="space-y-1">
-                        {filteredCrew.filter((c: Crew) => c.role === 'driver').map((c: Crew) => (
-                          <DraggableResource 
-                            key={c.id} 
-                            resource={c} 
-                            type="driver" 
-                            compact 
-                            onContextMenu={(e) => handleContextMenu(e, 'driver', c.id)}
-                          />
-                        ))}
-                        {filteredCrew.filter((c: Crew) => c.role === 'driver').length === 0 && (
-                          <p className="text-xs text-muted-foreground italic px-2">No drivers found</p>
-                        )}
+                      <div className="space-y-4 pl-1">
+                        {/* Reporting Today */}
+                        <div className="space-y-1">
+                             <h4 className="text-[10px] font-bold uppercase text-emerald-600 tracking-wider pl-1 mb-1 flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> Reporting Today
+                             </h4>
+                            {reportingCrew.filter((c: Crew) => c.role === 'driver').map((c: Crew) => (
+                            <DraggableResource 
+                                key={c.id} 
+                                resource={c} 
+                                type="driver" 
+                                compact 
+                                onContextMenu={(e) => handleContextMenu(e, 'driver', c.id)}
+                            />
+                            ))}
+                            {reportingCrew.filter((c: Crew) => c.role === 'driver').length === 0 && (
+                                <p className="text-[10px] text-muted-foreground italic px-2">No drivers reporting</p>
+                            )}
+                        </div>
+
+                        {/* Not Reporting / Available Pool */}
+                        <div className="space-y-1">
+                             <h4 className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider pl-1 mb-1 flex items-center gap-1">
+                                <Users className="h-3 w-3" /> Available Pool
+                             </h4>
+                            {notReportingCrew.filter((c: Crew) => c.role === 'driver').map((c: Crew) => (
+                            <DraggableResource 
+                                key={c.id} 
+                                resource={c} 
+                                type="driver" 
+                                compact 
+                                onContextMenu={(e) => handleContextMenu(e, 'driver', c.id)}
+                            />
+                            ))}
+                             {notReportingCrew.filter((c: Crew) => c.role === 'driver').length === 0 && (
+                                <p className="text-[10px] text-muted-foreground italic px-2">No other drivers</p>
+                            )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1358,19 +1400,44 @@ export default function HybridLineup() {
                     </div>
                     
                     {!collapsedResources.attendant && (
-                      <div className="space-y-1">
-                        {filteredCrew.filter((c: Crew) => c.role === 'attendant').map((c: Crew) => (
-                          <DraggableResource 
-                            key={c.id} 
-                            resource={c} 
-                            type="attendant" 
-                            compact 
-                            onContextMenu={(e) => handleContextMenu(e, 'attendant', c.id)}
-                          />
-                        ))}
-                         {filteredCrew.filter((c: Crew) => c.role === 'attendant').length === 0 && (
-                          <p className="text-xs text-muted-foreground italic px-2">No attendants found</p>
-                        )}
+                      <div className="space-y-4 pl-1">
+                         {/* Reporting Today */}
+                         <div className="space-y-1">
+                             <h4 className="text-[10px] font-bold uppercase text-emerald-600 tracking-wider pl-1 mb-1 flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> Reporting Today
+                             </h4>
+                            {reportingCrew.filter((c: Crew) => c.role === 'attendant').map((c: Crew) => (
+                            <DraggableResource 
+                                key={c.id} 
+                                resource={c} 
+                                type="attendant" 
+                                compact 
+                                onContextMenu={(e) => handleContextMenu(e, 'attendant', c.id)}
+                            />
+                            ))}
+                             {reportingCrew.filter((c: Crew) => c.role === 'attendant').length === 0 && (
+                                <p className="text-[10px] text-muted-foreground italic px-2">No attendants reporting</p>
+                            )}
+                        </div>
+
+                        {/* Not Reporting / Available Pool */}
+                        <div className="space-y-1">
+                             <h4 className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider pl-1 mb-1 flex items-center gap-1">
+                                <Users className="h-3 w-3" /> Available Pool
+                             </h4>
+                            {notReportingCrew.filter((c: Crew) => c.role === 'attendant').map((c: Crew) => (
+                            <DraggableResource 
+                                key={c.id} 
+                                resource={c} 
+                                type="attendant" 
+                                compact 
+                                onContextMenu={(e) => handleContextMenu(e, 'attendant', c.id)}
+                            />
+                            ))}
+                            {notReportingCrew.filter((c: Crew) => c.role === 'attendant').length === 0 && (
+                                <p className="text-[10px] text-muted-foreground italic px-2">No other attendants</p>
+                            )}
+                        </div>
                       </div>
                     )}
                   </div>

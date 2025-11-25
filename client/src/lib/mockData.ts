@@ -19,7 +19,7 @@ export interface Crew {
   role: CrewRole;
   status: "available" | "assigned" | "off-duty";
   phone: string;
-  reportTime: Date;
+  reportTime?: Date; // Optional for those not reporting today
   reportDepot: "Southampton" | "Calverton" | "Manorville";
 }
 
@@ -104,6 +104,12 @@ export const crew: Crew[] = [
   { id: "c13", name: "Charles Harris", role: "driver", status: "available", phone: "555-0113", reportTime: addHours(today, 5.5), reportDepot: "Southampton" },
   { id: "c14", name: "Patricia Martin", role: "driver", status: "assigned", phone: "555-0114", reportTime: addHours(today, 6), reportDepot: "Calverton" },
   { id: "c15", name: "Linda Thompson", role: "attendant", status: "assigned", phone: "555-0115", reportTime: addHours(today, 8), reportDepot: "Manorville" },
+  // Crew not reporting today
+  { id: "c16", name: "Kevin O'Connor", role: "driver", status: "available", phone: "555-0116", reportDepot: "Southampton" },
+  { id: "c17", name: "Susan Clark", role: "attendant", status: "off-duty", phone: "555-0117", reportDepot: "Manorville" },
+  { id: "c18", name: "Brian Lewis", role: "driver", status: "available", phone: "555-0118", reportDepot: "Calverton" },
+  { id: "c19", name: "Jessica Hall", role: "attendant", status: "available", phone: "555-0119", reportDepot: "Southampton" },
+  { id: "c20", name: "Daniel Young", role: "driver", status: "off-duty", phone: "555-0120", reportDepot: "Manorville" },
 ];
 
 // Helper to generate passengers
