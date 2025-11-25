@@ -371,6 +371,35 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
     return matchesSearch && matchesStatus;
   });
 
+  // Helper to determine line brand
+  const getLineBrand = (trip: Trip, vehicleId: string | null) => {
+    // Determine Brand
+    let brand = 'Jitney';
+    let brandColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    
+    // Check vehicle type first if assigned
+    if (vehicleId) {
+        const v = vehicles.find(v => v.id === vehicleId);
+        if (v && v.type === 'Ambassador') {
+            brand = 'Ambassador';
+            brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
+        }
+    } 
+    // Fallback to route heuristics if no vehicle or just generally
+    else if (trip.route.toLowerCase().includes('ambassador')) {
+        brand = 'Ambassador';
+        brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+
+    // Determine Line
+    let line = 'Montauk'; // Default
+    const r = trip.route.toLowerCase();
+    if (r.includes('westhampton')) line = 'Westhampton';
+    else if (r.includes('north fork') || r.includes('greenport')) line = 'North Fork';
+    
+    return { brand, brandColor, line };
+  };
+
   return (
     <div className="h-full overflow-hidden flex flex-col bg-muted/10">
       {/* Toolbar */}
@@ -426,8 +455,20 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
       <div className="flex-1 overflow-auto p-4">
         {view === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredItems.map((item, idx) => (
+                {filteredItems.map((item, idx) => {
+                    const { brand, brandColor, line } = getLineBrand(item.parent, item.parent.vehicleId);
+                    return (
                     <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex flex-col p-3 gap-3 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
+                        {/* Brand & Line Header */}
+                        <div className="flex items-center justify-between pb-2 border-b border-border/50 border-dashed">
+                            <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider border", brandColor)}>
+                                {brand}
+                            </Badge>
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                {line} Line
+                            </span>
+                        </div>
+
                         <div className="flex items-start justify-between">
                             <div className="flex flex-col">
                                 <span className="text-2xl font-bold font-mono tracking-tighter text-primary leading-none">
@@ -480,13 +521,15 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                              </div>
                         </div>
                     </Card>
-                ))}
+                    );
+                })}
             </div>
         ) : (
             <div className="bg-card rounded-md border shadow-sm overflow-hidden">
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow>
+                            <TableHead className="w-[80px]">Brand</TableHead>
                             <TableHead className="w-[100px]">Trip ID</TableHead>
                             <TableHead className="w-[100px]">Status</TableHead>
                             <TableHead className="w-[100px]">Time</TableHead>
@@ -496,8 +539,18 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredItems.map((item, idx) => (
+                        {filteredItems.map((item, idx) => {
+                            const { brand, brandColor, line } = getLineBrand(item.parent, item.parent.vehicleId);
+                            return (
                             <TableRow key={`${item.parent.id}-${item.id}-${idx}`} className="group hover:bg-muted/5">
+                                <TableCell>
+                                    <div className="flex flex-col gap-1">
+                                        <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-bold uppercase tracking-wider border", brandColor)}>
+                                            {brand}
+                                        </Badge>
+                                        <span className="text-[9px] text-muted-foreground font-medium uppercase">{line}</span>
+                                    </div>
+                                </TableCell>
                                 <TableCell className="font-medium">
                                     <span className="font-mono text-base font-bold text-primary">{item.id}</span>
                                 </TableCell>
@@ -536,7 +589,8 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </div>
