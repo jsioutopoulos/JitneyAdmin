@@ -95,53 +95,64 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
   
   const status = resource.status;
 
+  // Status Colors
+  const getStatusColor = (s: string) => {
+    switch(s) {
+        case 'assigned': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900';
+        case 'available': return 'border-blue-500 bg-blue-50/50 text-blue-900';
+        case 'off-duty': return 'border-gray-400 bg-gray-50/50 text-gray-600';
+        case 'active': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Vehicle
+        case 'maintenance': return 'border-amber-500 bg-amber-50/50 text-amber-900'; // Vehicle
+        case 'cleaning': return 'border-purple-500 bg-purple-50/50 text-purple-900'; // Vehicle
+        default: return 'border-muted bg-muted/20';
+    }
+  };
+
   return (
-    <Card
+    <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
       onContextMenu={onContextMenu}
       className={cn(
-        "p-2 cursor-grab hover:border-primary/50 transition-all select-none group relative",
+        "cursor-grab active:cursor-grabbing select-none group relative mb-2",
         isDragging && "opacity-50",
-        compact ? "p-1.5 text-xs rounded-md mb-1" : "mb-2"
       )}
     >
-      <div className="flex items-center gap-2">
-        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+      <div className={cn(
+        "flex items-center border-l-[3px] rounded-r-md border-y border-r bg-card pl-2 pr-2 py-2 shadow-sm hover:shadow-md transition-all",
+        getStatusColor(status),
+        compact ? "py-1 text-xs" : ""
+      )}>
+        <GripVertical className="h-4 w-4 text-muted-foreground/30 shrink-0 mr-2" />
         
-        <div className="flex-1 grid grid-cols-[1fr_40px_36px] gap-2 items-center">
-            <div className="font-medium truncate text-sm">
+        <div className="flex-1 grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+            <div className="font-bold truncate text-sm leading-tight">
                 {displayName}
             </div>
             
-            <div className="flex justify-end">
-                {!("plate" in resource) && (resource as Crew).reportTime ? (
-                    <span className="text-[10px] font-mono text-muted-foreground font-medium">
+            {!("plate" in resource) && (resource as Crew).reportTime && (
+                <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono font-medium opacity-80">
                         {format((resource as Crew).reportTime, 'HH:mm')}
                     </span>
-                ) : (
-                    <span className="w-full" />
-                )}
-            </div>
+                    
+                    {(resource as Crew).reportDepot && (
+                         <Badge variant="secondary" className="text-[9px] h-4 px-1.5 font-bold tracking-wider opacity-90 bg-background/50 border-current">
+                            {(resource as Crew).reportDepot.substring(0, 3).toUpperCase()}
+                        </Badge>
+                    )}
+                </div>
+            )}
 
-            <div className="flex justify-end">
-                {!("plate" in resource) && (resource as Crew).reportDepot ? (
-                    <Badge variant="outline" className="text-[9px] h-4 px-1 border-muted-foreground/30 text-muted-foreground w-full justify-center">
-                        {(resource as Crew).reportDepot.substring(0, 3).toUpperCase()}
-                    </Badge>
-                ) : (
-                    <span className="w-full" />
-                )}
-            </div>
+            {'plate' in resource && (
+                 <div className="text-xs opacity-80 font-medium">
+                    {(resource as Vehicle).capacity} PAX
+                 </div>
+            )}
         </div>
-
-        {status !== 'active' && status !== 'available' && (
-            <div className={cn("h-2 w-2 rounded-full shrink-0", status === 'assigned' ? "bg-emerald-500" : "bg-amber-500")} />
-        )}
       </div>
-      {!compact && subText && <div className="text-xs text-muted-foreground capitalize pl-6 mt-0.5">{subText}</div>}
-    </Card>
+    </div>
   );
 };
 
@@ -187,29 +198,19 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div className="w-full h-full min-h-[36px] flex items-center px-2 hover:bg-muted/50 cursor-pointer group">
-          {values.length === 0 ? (
-            <div className="flex items-center gap-2 text-muted-foreground/50 text-sm">
-              <Icon className="h-3.5 w-3.5 opacity-50" />
-              <span>{placeholder}</span>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-1 py-1">
+    <div className="w-full h-full relative group">
+        {/* 1. Render Badges Layer (Z-Index High) */}
+        {values.length > 0 && (
+            <div className="absolute inset-0 flex flex-wrap gap-1 items-center px-2 py-1 z-20 pointer-events-none">
               {selectedItems.map(item => (
                 <Badge 
                   key={item.id} 
                   variant="secondary" 
-                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-pointer transition-colors group/badge select-none z-50 relative" 
+                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-pointer transition-colors group/badge select-none pointer-events-auto shadow-sm border border-transparent hover:border-primary/20" 
                   onContextMenu={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
                     onResourceRightClick?.(item.id, item.role || 'driver');
-                  }}
-                  onPointerDown={(e) => {
-                     // Use pointer down to capture click before drag start if needed, but simple click should work if we stop prop
-                     e.stopPropagation();
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -229,35 +230,52 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                   />
                 </Badge>
               ))}
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                <Plus className="h-3 w-3 text-muted-foreground" />
-              </div>
             </div>
-          )}
-        </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search..." className="h-8 text-xs" />
-          <CommandList>
-            <CommandEmpty>No results.</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.id}
-                  value={option.name}
-                  onSelect={() => toggleItem(option.id)}
-                  className="text-xs"
-                >
-                  <Check className={cn("mr-2 h-3 w-3", values.includes(option.id) ? "opacity-100" : "opacity-0")} />
-                  {option.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        )}
+
+        {/* 2. Popover Trigger Layer (Fill Space) */}
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="w-full h-full flex items-center px-2 hover:bg-muted/50 cursor-pointer">
+                    {/* Placeholder if empty */}
+                    {values.length === 0 && (
+                        <div className="flex items-center gap-2 text-muted-foreground/50 text-sm pointer-events-none">
+                            <Icon className="h-3.5 w-3.5 opacity-50" />
+                            <span>{placeholder}</span>
+                        </div>
+                    )}
+                    
+                    {/* Plus Icon on Hover (if not empty) */}
+                    {values.length > 0 && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <Plus className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                    )}
+                </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+                <Command>
+                <CommandInput placeholder="Search..." className="h-8 text-xs" />
+                <CommandList>
+                    <CommandEmpty>No results.</CommandEmpty>
+                    <CommandGroup>
+                    {options.map((option) => (
+                        <CommandItem
+                        key={option.id}
+                        value={option.name}
+                        onSelect={() => toggleItem(option.id)}
+                        className="text-xs"
+                        >
+                        <Check className={cn("mr-2 h-3 w-3", values.includes(option.id) ? "opacity-100" : "opacity-0")} />
+                        {option.name}
+                        </CommandItem>
+                    ))}
+                    </CommandGroup>
+                </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    </div>
   );
 };
 
