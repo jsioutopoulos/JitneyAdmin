@@ -1692,6 +1692,11 @@ export default function HybridLineup() {
                             <X className="mr-2 h-3.5 w-3.5" />
                             Cancel Trip
                         </Button>
+                        <Separator className="my-1" />
+                        <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2 text-muted-foreground" onClick={() => setContextMenu(null)}>
+                            <PanelLeftClose className="mr-2 h-3.5 w-3.5" />
+                            Dismiss
+                        </Button>
                     </>
                 ) : (
                     <>
@@ -1712,6 +1717,11 @@ export default function HybridLineup() {
                         }}>
                             <X className="mr-2 h-3.5 w-3.5" />
                             Unassign
+                        </Button>
+                        <Separator className="my-1" />
+                        <Button variant="ghost" className="w-full justify-start h-8 text-xs px-2 text-muted-foreground" onClick={() => setContextMenu(null)}>
+                            <PanelLeftClose className="mr-2 h-3.5 w-3.5" />
+                            Dismiss
                         </Button>
                     </>
                 )}
