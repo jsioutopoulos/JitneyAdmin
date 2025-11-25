@@ -797,7 +797,7 @@ export default function HybridLineup() {
             ) : (
               /* Scrollable Grid (Paper View) */
               <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible">
-                <div className="bg-card w-[1200px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden flex flex-col">
+                <div className="bg-card w-[1400px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden flex flex-col">
                   
                   {/* Header */}
                   <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5 shrink-0">
@@ -842,10 +842,10 @@ export default function HybridLineup() {
                                         key={leg.id} 
                                         variant="outline"
                                         className={cn(
-                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
-                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
-                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1 py-0 h-5 text-[10px] font-mono border-primary/20 shrink-0 bg-background text-primary",
+                                          // leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
                                         onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
@@ -857,7 +857,7 @@ export default function HybridLineup() {
                                     {/* Separator if both directions exist */}
                                     {row.left.legs.some((l: TripLeg) => l.direction === 'westbound') && 
                                      row.left.legs.some((l: TripLeg) => l.direction === 'eastbound') && (
-                                      <span className="text-muted-foreground font-bold mx-0.5">+</span>
+                                      <span className="text-muted-foreground font-bold mx-0.5 text-[10px]">+</span>
                                     )}
 
                                     {/* Eastbound Legs */}
@@ -866,10 +866,10 @@ export default function HybridLineup() {
                                         key={leg.id} 
                                         variant="outline"
                                         className={cn(
-                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
-                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
-                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1 py-0 h-5 text-[10px] font-mono border-primary/20 shrink-0 bg-background text-primary",
+                                          // leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
                                         onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
@@ -963,10 +963,10 @@ export default function HybridLineup() {
                                         key={leg.id} 
                                         variant="outline"
                                         className={cn(
-                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
-                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
-                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1 py-0 h-5 text-[10px] font-mono border-primary/20 shrink-0 bg-background text-primary",
+                                          // leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
                                         onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
@@ -978,7 +978,7 @@ export default function HybridLineup() {
                                     {/* Separator if both directions exist */}
                                     {row.right.legs.some((l: TripLeg) => l.direction === 'westbound') && 
                                      row.right.legs.some((l: TripLeg) => l.direction === 'eastbound') && (
-                                      <span className="text-muted-foreground font-bold mx-0.5">+</span>
+                                      <span className="text-muted-foreground font-bold mx-0.5 text-[10px]">+</span>
                                     )}
 
                                     {/* Eastbound Legs */}
@@ -987,10 +987,10 @@ export default function HybridLineup() {
                                         key={leg.id} 
                                         variant="outline"
                                         className={cn(
-                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1.5 py-0 h-6 text-xs font-mono border-primary/20 shrink-0",
-                                          leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                                          leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
-                                          leg.status === 'scheduled' && "bg-background text-primary"
+                                          "cursor-pointer hover:bg-primary/10 transition-colors px-1 py-0 h-5 text-[10px] font-mono border-primary/20 shrink-0 bg-background text-primary",
+                                          // leg.status === 'en-route' && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                                          // leg.status === 'completed' && "bg-muted text-muted-foreground border-transparent opacity-70",
+                                          // leg.status === 'scheduled' && "bg-background text-primary"
                                         )}
                                         onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
                                         onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
