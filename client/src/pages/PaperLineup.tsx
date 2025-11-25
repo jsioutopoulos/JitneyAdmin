@@ -102,33 +102,45 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
       {...attributes}
       onContextMenu={onContextMenu}
       className={cn(
-        "flex items-center gap-2 p-2 cursor-grab hover:border-primary/50 transition-all select-none group relative",
+        "p-2 cursor-grab hover:border-primary/50 transition-all select-none group relative",
         isDragging && "opacity-50",
         compact ? "p-1.5 text-xs rounded-md mb-1" : "mb-2"
       )}
     >
-      <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-            <div className="font-medium truncate flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+        
+        <div className="flex-1 grid grid-cols-[1fr_40px_36px] gap-2 items-center">
+            <div className="font-medium truncate text-sm">
                 {displayName}
-                {!("plate" in resource) && (resource as Crew).reportTime && (
-                    <span className="text-[10px] font-mono text-muted-foreground bg-muted/30 px-1 rounded">
+            </div>
+            
+            <div className="flex justify-end">
+                {!("plate" in resource) && (resource as Crew).reportTime ? (
+                    <span className="text-[10px] font-mono text-muted-foreground font-medium">
                         {format((resource as Crew).reportTime, 'HH:mm')}
                     </span>
+                ) : (
+                    <span className="w-full" />
                 )}
             </div>
-            {!("plate" in resource) && (resource as Crew).reportDepot && (
-                <Badge variant="outline" className="text-[9px] h-4 px-1 ml-1 border-muted-foreground/30 text-muted-foreground">
-                    {(resource as Crew).reportDepot.substring(0, 3).toUpperCase()}
-                </Badge>
-            )}
+
+            <div className="flex justify-end">
+                {!("plate" in resource) && (resource as Crew).reportDepot ? (
+                    <Badge variant="outline" className="text-[9px] h-4 px-1 border-muted-foreground/30 text-muted-foreground w-full justify-center">
+                        {(resource as Crew).reportDepot.substring(0, 3).toUpperCase()}
+                    </Badge>
+                ) : (
+                    <span className="w-full" />
+                )}
+            </div>
         </div>
-        {!compact && <div className="text-xs text-muted-foreground capitalize">{subText}</div>}
+
+        {status !== 'active' && status !== 'available' && (
+            <div className={cn("h-2 w-2 rounded-full shrink-0", status === 'assigned' ? "bg-emerald-500" : "bg-amber-500")} />
+        )}
       </div>
-      {status !== 'active' && status !== 'available' && (
-        <div className={cn("h-2 w-2 rounded-full", status === 'assigned' ? "bg-emerald-500" : "bg-amber-500")} />
-      )}
+      {!compact && subText && <div className="text-xs text-muted-foreground capitalize pl-6 mt-0.5">{subText}</div>}
     </Card>
   );
 };
@@ -189,18 +201,21 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
                 <Badge 
                   key={item.id} 
                   variant="secondary" 
-                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-pointer transition-colors group/badge select-none" 
+                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-pointer transition-colors group/badge select-none z-50 relative" 
                   onContextMenu={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    onResourceRightClick?.(item.id, item.role || 'driver'); // heuristic for role
+                    onResourceRightClick?.(item.id, item.role || 'driver');
+                  }}
+                  onPointerDown={(e) => {
+                     // Use pointer down to capture click before drag start if needed, but simple click should work if we stop prop
+                     e.stopPropagation();
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     if (onResourceClick) {
                         onResourceClick(item.id, item.role || 'driver');
-                    } else {
-                         // If no click handler, maybe toggle open? No, let popover trigger handle background clicks
                     }
                   }}
                 >
