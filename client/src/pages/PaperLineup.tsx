@@ -471,7 +471,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
         {view === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredItems.map((item, idx) => {
-                    const { brand, brandColor, line } = getLineBrand(item.parent, item.parent.vehicleId);
+                    const { brand, brandColor, line, lineColor } = getLineBrand(item.parent, item.parent.vehicleId);
                     return (
                     <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex flex-col p-3 gap-3 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
                         {/* Brand & Line Header */}
