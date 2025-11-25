@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger } from "@/lib/mockData";
+import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger, TripLeg } from "@/lib/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
   Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, 
   History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone, 
   Star, Users, Accessibility, Package, Search, List, UserPlus,
-  MoreHorizontal, Bell, Settings, Filter, Clock, Circle
+  MoreHorizontal, Bell, Settings, Filter, Clock, Circle, LayoutGrid, Table as TableIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +64,7 @@ import mapBg from "@assets/generated_images/subtle_topological_map_background.pn
 
 // --- Types & Helpers ---
 
-type ResourceType = 'vehicle' | 'driver' | 'attendant' | 'trip';
+type ResourceType = 'vehicle' | 'driver' | 'attendant' | 'trip' | 'leg';
 
 interface DraggableData {
   type: ResourceType;
@@ -243,17 +243,79 @@ const EditableText = ({ value, onChange, className, onContextMenu }: { value: st
   );
 };
 
+const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
+  return (
+    <div className="p-4 overflow-auto h-full">
+      <div className="border rounded-md bg-card shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[80px]">Trip</TableHead>
+              <TableHead>Line</TableHead>
+              <TableHead className="text-right">Cap</TableHead>
+              <TableHead className="text-right">Res</TableHead>
+              <TableHead className="text-right">Avl</TableHead>
+              <TableHead className="text-center">Stat</TableHead>
+              <TableHead className="text-center">Notes</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {trips.flatMap(t => t.legs ? t.legs.map(l => ({ ...l, parent: t })) : [{ id: t.id, status: t.status, direction: t.direction, parent: t }]).map((item, idx) => (
+               <TableRow key={`${item.parent.id}-${item.id}-${idx}`} className="hover:bg-muted/5">
+                  <TableCell className="font-bold font-mono">{item.id}</TableCell>
+                  <TableCell>
+                     <Badge variant={item.parent.direction === 'westbound' ? "default" : "secondary"} className={cn(
+                        "h-6 w-6 rounded-full p-0 flex items-center justify-center text-[10px]",
+                        item.parent.direction === 'westbound' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-500 hover:bg-amber-600"
+                     )}>
+                        {item.parent.direction === 'westbound' ? 'W' : 'E'}
+                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">{item.parent.capacity}</TableCell>
+                  <TableCell className="text-right font-medium">{item.parent.reservedCount}</TableCell>
+                  <TableCell className="text-right font-bold text-emerald-600">{item.parent.capacity - item.parent.reservedCount}</TableCell>
+                  <TableCell className="text-center">
+                     <Badge variant="outline" className={cn(
+                        "text-[10px] uppercase",
+                        item.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
+                        item.status === 'completed' && "bg-gray-100 text-gray-500 border-gray-200",
+                        item.status === 'scheduled' && "bg-emerald-50 text-emerald-600 border-emerald-200"
+                     )}>
+                        {item.status}
+                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                     {item.parent.hasAda && <Accessibility className="h-4 w-4 inline text-blue-500" />}
+                  </TableCell>
+                  <TableCell className="text-right">
+                     <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">List</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">Stops</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">Data</Button>
+                     </div>
+                  </TableCell>
+               </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
+
+
 // --- Main Component ---
 
 export default function HybridLineup() {
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeDragItem, setActiveDragItem] = useState<DraggableData | null>(null);
+  const [viewMode, setViewMode] = useState<'paper' | 'digital'>('paper');
   
   // Drawer State
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerContent, setDrawerContent] = useState<{ type: ResourceType, id: string } | null>(null);
-  const [drawerTab, setDrawerTab] = useState("manifest");
+  const [drawerContent, setDrawerContent] = useState<{ type: ResourceType, id: string, legId?: string } | null>(null);
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -325,9 +387,10 @@ export default function HybridLineup() {
 
 
   // Context Menu Handler
-  const handleContextMenu = (e: React.MouseEvent, type: ResourceType, id: string) => {
+  const handleContextMenu = (e: React.MouseEvent, type: ResourceType, id: string, legId?: string) => {
     e.preventDefault();
-    setDrawerContent({ type, id });
+    e.stopPropagation();
+    setDrawerContent({ type, id, legId });
     setDrawerOpen(true);
   };
 
@@ -436,17 +499,32 @@ export default function HybridLineup() {
     if (drawerContent.type === 'trip') {
       const t = localTrips.find(x => x.id === drawerContent.id);
       if (!t) return null;
+      const leg = t.legs?.find(l => l.id === drawerContent.legId);
+
       return (
         <Tabs defaultValue="manifest" className="w-full h-full flex flex-col">
           <div className="mb-6 space-y-4 shrink-0">
               <div className="flex items-center justify-between">
                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                       <Badge className="text-lg px-2 py-1">{t.packId || t.id}</Badge>
-                       <Badge variant="outline" className="capitalize">{t.status}</Badge>
+                       {leg ? (
+                         <Badge className="text-xl px-3 py-1 bg-primary">{leg.id}</Badge>
+                       ) : (
+                         <Badge className="text-lg px-2 py-1">{t.packId || t.id}</Badge>
+                       )}
+                       
+                       <Badge variant="outline" className={cn(
+                         "capitalize",
+                         leg?.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
+                         leg?.status === 'completed' && "bg-gray-100 text-gray-500 border-gray-200",
+                         leg?.status === 'scheduled' && "bg-emerald-50 text-emerald-600 border-emerald-200"
+                       )}>
+                          {leg ? leg.status : t.status}
+                       </Badge>
                        {t.hasAda && <Accessibility className="h-4 w-4 text-blue-500" />}
                     </div>
                     <h2 className="text-2xl font-bold tracking-tight">{t.route}</h2>
+                    {leg && <p className="text-sm text-muted-foreground">Leg Details • {leg.direction === 'westbound' ? 'Westbound' : 'Eastbound'}</p>}
                  </div>
                  <div className="text-right">
                      <div className="text-2xl font-bold font-mono">{t.reservedCount}/{t.capacity}</div>
@@ -663,8 +741,25 @@ export default function HybridLineup() {
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 )}
-                <div className="bg-primary text-primary-foreground p-1.5 rounded-md shadow-sm shrink-0">
-                  <Printer className="h-5 w-5" />
+                <div className="flex items-center border rounded-lg bg-background p-1 shadow-sm">
+                   <Button 
+                    variant={viewMode === 'paper' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setViewMode('paper')}
+                   >
+                      <LayoutGrid className="h-3.5 w-3.5 mr-2" />
+                      Lineup
+                   </Button>
+                   <Button 
+                    variant={viewMode === 'digital' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setViewMode('digital')}
+                   >
+                      <TableIcon className="h-3.5 w-3.5 mr-2" />
+                      Digital
+                   </Button>
                 </div>
                 <div className="relative max-w-md w-full">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -695,211 +790,256 @@ export default function HybridLineup() {
               </div>
             </div>
 
-            {/* Scrollable Grid */}
-            <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible">
-              <div className="bg-card w-[1200px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden flex flex-col">
-                
-                {/* Header */}
-                <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5 shrink-0">
-                  <div className="flex flex-col gap-1">
-                      <h1 className="text-2xl font-bold tracking-tight text-primary">HAMPTON JITNEY</h1>
-                      <h2 className="text-lg font-medium text-muted-foreground tracking-wide">DAILY OPERATIONS LINEUP</h2>
-                  </div>
-                  <div className="flex gap-8">
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Date</span>
-                        <span className="text-lg font-medium tabular-nums">Nov 24, 2025</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Day</span>
-                        <span className="text-lg font-medium">Monday</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Weather</span>
-                        <span className="text-lg font-medium flex items-center gap-1">Sunny 65°</span>
-                      </div>
-                  </div>
-                </div>
-
-                {/* Grid */}
-                <div className="flex border-b border-border bg-card flex-1">
-                  {/* Left Column */}
-                  <div className="flex-1 border-r border-border flex flex-col">
-                    <div className="flex border-b border-border h-9 bg-muted/30 shrink-0">
-                        <div className="w-[15%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Trip</div>
-                        <div className="w-[20%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Vehicle</div>
-                        <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
+            {/* Content Switcher */}
+            {viewMode === 'digital' ? (
+               <DigitalGridView trips={localTrips} />
+            ) : (
+              /* Scrollable Grid (Paper View) */
+              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible">
+                <div className="bg-card w-[1200px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden flex flex-col">
+                  
+                  {/* Header */}
+                  <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5 shrink-0">
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-2xl font-bold tracking-tight text-primary">HAMPTON JITNEY</h1>
+                        <h2 className="text-lg font-medium text-muted-foreground tracking-wide">DAILY OPERATIONS LINEUP</h2>
                     </div>
-                    {emptyRows.map((row, idx) => (
-                        <div key={`L-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
-                          {/* Trip ID / Time */}
-                          <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative cursor-context-menu"
-                               onContextMenu={(e) => row.left && handleContextMenu(e, 'trip', row.left.id)}>
-                              {row.left && (
-                                <>
-                                  <EditableText 
-                                    value={row.left.packId || row.left.id.toUpperCase()} 
-                                    onChange={(val) => handleUpdateTrip(row.left!.id, 'packId', val)}
-                                    className="text-xs font-bold text-primary text-center"
-                                  />
-                                  <div className="flex items-center gap-1 absolute bottom-0.5">
-                                      <span className="text-[10px] text-muted-foreground">{format(row.left.departureTime, "HH:mm")}</span>
-                                      {row.left.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
-                                  </div>
-                                </>
-                              )}
-                          </div>
-                          
-                          {/* Vehicle Droppable */}
-                          <div className="w-[20%] border-r border-border p-0 relative">
-                              {row.left && (
-                                <DroppableCell id={`${row.left.id}:vehicleId`} accept={['vehicle']}>
-                                  <MultiResourceSelect 
-                                    values={row.left.vehicleId ? [row.left.vehicleId] : []}
-                                    options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1] }))}
-                                    onChange={(ids) => handleUpdateTrip(row.left!.id, 'vehicleId', ids[0] || null)}
-                                    placeholder="Bus"
-                                    icon={Bus}
-                                    onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
-                                  />
-                                </DroppableCell>
-                              )}
-                          </div>
-                          
-                          {/* Crew Droppable */}
-                          <div className="w-[65%] flex divide-x divide-border/50">
-                              <div className="flex-1 relative">
-                                {row.left && (
-                                  <DroppableCell id={`${row.left.id}:driverIds`} accept={['driver']}>
-                                    <MultiResourceSelect 
-                                      values={row.left.driverIds || []}
-                                      options={crew.filter(c => c.role === 'driver')}
-                                      onChange={(ids) => handleUpdateTrip(row.left!.id, 'driverIds', ids)}
-                                      placeholder="Drivers"
-                                      icon={User}
-                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
-                                    />
-                                  </DroppableCell>
-                                )}
-                              </div>
-                              <div className="flex-1 relative">
-                                {row.left && (
-                                  <DroppableCell id={`${row.left.id}:attendantIds`} accept={['attendant']}>
-                                    <MultiResourceSelect 
-                                      values={row.left.attendantIds || []}
-                                      options={crew.filter(c => c.role === 'attendant')}
-                                      onChange={(ids) => handleUpdateTrip(row.left!.id, 'attendantIds', ids)}
-                                      placeholder="Attendants"
-                                      icon={Shield}
-                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
-                                    />
-                                  </DroppableCell>
-                                )}
-                              </div>
-                          </div>
+                    <div className="flex gap-8">
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Date</span>
+                          <span className="text-lg font-medium tabular-nums">Nov 24, 2025</span>
                         </div>
-                    ))}
-                  </div>
-
-                  {/* Right Column - Mirror of Left */}
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex border-b border-border h-9 bg-muted/30 shrink-0">
-                        <div className="w-[15%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Trip</div>
-                        <div className="w-[20%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Vehicle</div>
-                        <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Day</span>
+                          <span className="text-lg font-medium">Monday</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Weather</span>
+                          <span className="text-lg font-medium flex items-center gap-1">Sunny 65°</span>
+                        </div>
                     </div>
-                    {emptyRows.map((row, idx) => (
-                        <div key={`R-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
-                          {/* Trip ID / Time */}
-                          <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative cursor-context-menu"
-                               onContextMenu={(e) => row.right && handleContextMenu(e, 'trip', row.right.id)}>
-                              {row.right && (
-                                <>
-                                  <EditableText 
-                                    value={row.right.packId || row.right.id.toUpperCase()} 
-                                    onChange={(val) => handleUpdateTrip(row.right!.id, 'packId', val)}
-                                    className="text-xs font-bold text-primary text-center"
-                                  />
-                                  <div className="flex items-center gap-1 absolute bottom-0.5">
-                                      <span className="text-[10px] text-muted-foreground">{format(row.right.departureTime, "HH:mm")}</span>
-                                      {row.right.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
-                                  </div>
-                                </>
-                              )}
-                          </div>
-                          
-                          {/* Vehicle Droppable */}
-                          <div className="w-[20%] border-r border-border p-0 relative">
-                              {row.right && (
-                                <DroppableCell id={`${row.right.id}:vehicleId`} accept={['vehicle']}>
-                                  <MultiResourceSelect 
-                                    values={row.right.vehicleId ? [row.right.vehicleId] : []}
-                                    options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1] }))}
-                                    onChange={(ids) => handleUpdateTrip(row.right!.id, 'vehicleId', ids[0] || null)}
-                                    placeholder="Bus"
-                                    icon={Bus}
-                                    onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
-                                  />
-                                </DroppableCell>
-                              )}
-                          </div>
-                          
-                          {/* Crew Droppable */}
-                          <div className="w-[65%] flex divide-x divide-border/50">
-                              <div className="flex-1 relative">
-                                {row.right && (
-                                  <DroppableCell id={`${row.right.id}:driverIds`} accept={['driver']}>
-                                    <MultiResourceSelect 
-                                      values={row.right.driverIds || []}
-                                      options={crew.filter(c => c.role === 'driver')}
-                                      onChange={(ids) => handleUpdateTrip(row.right!.id, 'driverIds', ids)}
-                                      placeholder="Drivers"
-                                      icon={User}
-                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
-                                    />
-                                  </DroppableCell>
-                                )}
-                              </div>
-                              <div className="flex-1 relative">
-                                {row.right && (
-                                  <DroppableCell id={`${row.right.id}:attendantIds`} accept={['attendant']}>
-                                    <MultiResourceSelect 
-                                      values={row.right.attendantIds || []}
-                                      options={crew.filter(c => c.role === 'attendant')}
-                                      onChange={(ids) => handleUpdateTrip(row.right!.id, 'attendantIds', ids)}
-                                      placeholder="Attendants"
-                                      icon={Shield}
-                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
-                                    />
-                                  </DroppableCell>
-                                )}
-                              </div>
-                          </div>
-                        </div>
-                    ))}
                   </div>
-                </div>
 
-                {/* Footer (Static) */}
-                <div className="flex h-32 bg-muted/5 border-t border-border shrink-0">
-                   {/* Placeholder footer content */}
-                   <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic">
-                      Scrollable Footer Area (Charters / Feeders)
-                   </div>
-                </div>
+                  {/* Grid */}
+                  <div className="flex border-b border-border bg-card flex-1">
+                    {/* Left Column */}
+                    <div className="flex-1 border-r border-border flex flex-col">
+                      <div className="flex border-b border-border h-9 bg-muted/30 shrink-0">
+                          <div className="w-[15%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Trip</div>
+                          <div className="w-[20%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Vehicle</div>
+                          <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
+                      </div>
+                      {emptyRows.map((row, idx) => (
+                          <div key={`L-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                            {/* Trip ID / Time */}
+                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative p-1 gap-1">
+                                {row.left && row.left.legs && row.left.legs.length > 0 ? (
+                                  // Render individual legs
+                                  row.left.legs.map((leg, legIdx) => (
+                                    <div 
+                                      key={leg.id} 
+                                      className={cn(
+                                        "w-full text-center cursor-pointer hover:scale-105 transition-transform rounded px-1 border border-transparent hover:border-border/50",
+                                        leg.status === 'en-route' && "bg-blue-100/50 text-blue-700",
+                                        leg.status === 'completed' && "opacity-50 grayscale"
+                                      )}
+                                      onClick={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                      onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id, leg.id)}
+                                    >
+                                      <span className="text-xs font-bold text-primary">{leg.id}</span>
+                                    </div>
+                                  ))
+                                ) : row.left && (
+                                  // Fallback for single leg
+                                   <>
+                                    <EditableText 
+                                      value={row.left.packId || row.left.id.toUpperCase()} 
+                                      onChange={(val) => handleUpdateTrip(row.left!.id, 'packId', val)}
+                                      className="text-xs font-bold text-primary text-center"
+                                      onContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
+                                    />
+                                   </>
+                                )}
+                                
+                                {row.left && (
+                                  <div className="flex items-center gap-1 absolute bottom-0.5 left-0 right-0 justify-center pointer-events-none">
+                                    <span className="text-[10px] text-muted-foreground">{format(row.left.departureTime, "HH:mm")}</span>
+                                    {row.left.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
+                                  </div>
+                                )}
+                            </div>
+                            
+                            {/* Vehicle Droppable */}
+                            <div className="w-[20%] border-r border-border p-0 relative">
+                                {row.left && (
+                                  <DroppableCell id={`${row.left.id}:vehicleId`} accept={['vehicle']}>
+                                    <MultiResourceSelect 
+                                      values={row.left.vehicleId ? [row.left.vehicleId] : []}
+                                      options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1] }))}
+                                      onChange={(ids) => handleUpdateTrip(row.left!.id, 'vehicleId', ids[0] || null)}
+                                      placeholder="Bus"
+                                      icon={Bus}
+                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
+                                    />
+                                  </DroppableCell>
+                                )}
+                            </div>
+                            
+                            {/* Crew Droppable */}
+                            <div className="w-[65%] flex divide-x divide-border/50">
+                                <div className="flex-1 relative">
+                                  {row.left && (
+                                    <DroppableCell id={`${row.left.id}:driverIds`} accept={['driver']}>
+                                      <MultiResourceSelect 
+                                        values={row.left.driverIds || []}
+                                        options={crew.filter(c => c.role === 'driver')}
+                                        onChange={(ids) => handleUpdateTrip(row.left!.id, 'driverIds', ids)}
+                                        placeholder="Drivers"
+                                        icon={User}
+                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
+                                      />
+                                    </DroppableCell>
+                                  )}
+                                </div>
+                                <div className="flex-1 relative">
+                                  {row.left && (
+                                    <DroppableCell id={`${row.left.id}:attendantIds`} accept={['attendant']}>
+                                      <MultiResourceSelect 
+                                        values={row.left.attendantIds || []}
+                                        options={crew.filter(c => c.role === 'attendant')}
+                                        onChange={(ids) => handleUpdateTrip(row.left!.id, 'attendantIds', ids)}
+                                        placeholder="Attendants"
+                                        icon={Shield}
+                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
+                                      />
+                                    </DroppableCell>
+                                  )}
+                                </div>
+                            </div>
+                          </div>
+                      ))}
+                    </div>
 
+                    {/* Right Column - Mirror of Left */}
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex border-b border-border h-9 bg-muted/30 shrink-0">
+                          <div className="w-[15%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Trip</div>
+                          <div className="w-[20%] border-r border-border flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Vehicle</div>
+                          <div className="w-[65%] flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">Crew Assignment</div>
+                      </div>
+                      {emptyRows.map((row, idx) => (
+                          <div key={`R-${idx}`} className="flex min-h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                            {/* Trip ID / Time */}
+                            <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex flex-col justify-center items-center relative p-1 gap-1">
+                                {row.right && row.right.legs && row.right.legs.length > 0 ? (
+                                  // Render individual legs
+                                  row.right.legs.map((leg, legIdx) => (
+                                    <div 
+                                      key={leg.id} 
+                                      className={cn(
+                                        "w-full text-center cursor-pointer hover:scale-105 transition-transform rounded px-1 border border-transparent hover:border-border/50",
+                                        leg.status === 'en-route' && "bg-blue-100/50 text-blue-700",
+                                        leg.status === 'completed' && "opacity-50 grayscale"
+                                      )}
+                                      onClick={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                      onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id, leg.id)}
+                                    >
+                                      <span className="text-xs font-bold text-primary">{leg.id}</span>
+                                    </div>
+                                  ))
+                                ) : row.right && (
+                                  // Fallback for single leg
+                                   <>
+                                    <EditableText 
+                                      value={row.right.packId || row.right.id.toUpperCase()} 
+                                      onChange={(val) => handleUpdateTrip(row.right!.id, 'packId', val)}
+                                      className="text-xs font-bold text-primary text-center"
+                                      onContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
+                                    />
+                                   </>
+                                )}
+
+                                {row.right && (
+                                  <div className="flex items-center gap-1 absolute bottom-0.5 left-0 right-0 justify-center pointer-events-none">
+                                    <span className="text-[10px] text-muted-foreground">{format(row.right.departureTime, "HH:mm")}</span>
+                                    {row.right.hasAda && <Accessibility className="h-[8px] w-[8px] text-blue-500" />}
+                                  </div>
+                                )}
+                            </div>
+                            
+                            {/* Vehicle Droppable */}
+                            <div className="w-[20%] border-r border-border p-0 relative">
+                                {row.right && (
+                                  <DroppableCell id={`${row.right.id}:vehicleId`} accept={['vehicle']}>
+                                    <MultiResourceSelect 
+                                      values={row.right.vehicleId ? [row.right.vehicleId] : []}
+                                      options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1] }))}
+                                      onChange={(ids) => handleUpdateTrip(row.right!.id, 'vehicleId', ids[0] || null)}
+                                      placeholder="Bus"
+                                      icon={Bus}
+                                      onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
+                                    />
+                                  </DroppableCell>
+                                )}
+                            </div>
+                            
+                            {/* Crew Droppable */}
+                            <div className="w-[65%] flex divide-x divide-border/50">
+                                <div className="flex-1 relative">
+                                  {row.right && (
+                                    <DroppableCell id={`${row.right.id}:driverIds`} accept={['driver']}>
+                                      <MultiResourceSelect 
+                                        values={row.right.driverIds || []}
+                                        options={crew.filter(c => c.role === 'driver')}
+                                        onChange={(ids) => handleUpdateTrip(row.right!.id, 'driverIds', ids)}
+                                        placeholder="Drivers"
+                                        icon={User}
+                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
+                                      />
+                                    </DroppableCell>
+                                  )}
+                                </div>
+                                <div className="flex-1 relative">
+                                  {row.right && (
+                                    <DroppableCell id={`${row.right.id}:attendantIds`} accept={['attendant']}>
+                                      <MultiResourceSelect 
+                                        values={row.right.attendantIds || []}
+                                        options={crew.filter(c => c.role === 'attendant')}
+                                        onChange={(ids) => handleUpdateTrip(row.right!.id, 'attendantIds', ids)}
+                                        placeholder="Attendants"
+                                        icon={Shield}
+                                        onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
+                                      />
+                                    </DroppableCell>
+                                  )}
+                                </div>
+                            </div>
+                          </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Footer (Static) */}
+                  <div className="flex h-32 bg-muted/5 border-t border-border shrink-0">
+                     {/* Placeholder footer content */}
+                     <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic">
+                        Scrollable Footer Area (Charters / Feeders)
+                     </div>
+                  </div>
+
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* RIGHT DRAWER - DETAILS */}
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <SheetContent className="w-[500px] sm:w-[650px] overflow-hidden flex flex-col p-0 gap-0">
+            <SheetContent className="w-[800px] max-w-[90vw] sm:max-w-[90vw] overflow-hidden flex flex-col p-0 gap-0">
                 {/* Custom Sheet Header to fit Tabs nicely */}
                 <div className="p-6 pb-0">
                     <SheetHeader className="mb-2">
                         <SheetTitle>Dispatch Operations</SheetTitle>
-                        <SheetDescription>Manage details for {drawerContent?.type} {drawerContent?.id}</SheetDescription>
+                        <SheetDescription>Manage details for {drawerContent?.type} {drawerContent?.legId || drawerContent?.id}</SheetDescription>
                     </SheetHeader>
                 </div>
                 <div className="flex-1 overflow-hidden flex flex-col p-6 pt-2">

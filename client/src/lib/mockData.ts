@@ -42,6 +42,12 @@ export interface Stop {
   assignedVehicleId?: string; // If trip has multiple vehicles
 }
 
+export interface TripLeg {
+  id: string;
+  status: TripStatus;
+  direction: "westbound" | "eastbound";
+}
+
 export interface Trip {
   id: string;
   route: string;
@@ -56,6 +62,7 @@ export interface Trip {
   reservedCount: number;
   status: TripStatus;
   packId?: string; // Trip chain ID - Used for the "Trip" column display
+  legs?: TripLeg[];
   notes?: string;
   hasAda?: boolean;
   passengers: Passenger[];
@@ -64,40 +71,8 @@ export interface Trip {
 
 const today = startOfToday();
 
-export const vehicles: Vehicle[] = [
-  { id: "v1", name: "Ambassador 304", type: "Ambassador", status: "active", capacity: 30, plate: "HAMP-152" },
-  { id: "v2", name: "Ambassador 305", type: "Ambassador", status: "active", capacity: 30, plate: "HAMP-127" },
-  { id: "v3", name: "Jitney 102", type: "Jitney", status: "active", capacity: 52, plate: "HAMP-149" },
-  { id: "v4", name: "Jitney 105", type: "Jitney", status: "maintenance", capacity: 52, plate: "HAMP-173" },
-  { id: "v5", name: "Ambassador 308", type: "Ambassador", status: "cleaning", capacity: 30, plate: "HAMP-129" },
-  { id: "v6", name: "Jitney 108", type: "Jitney", status: "active", capacity: 52, plate: "HAMP-167" },
-  { id: "v7", name: "Ambassador 310", type: "Ambassador", status: "active", capacity: 30, plate: "HAMP-133" },
-  { id: "v8", name: "Jitney 111", type: "Jitney", status: "active", capacity: 52, plate: "HAMP-111" },
-  { id: "v9", name: "Jitney 147", type: "Jitney", status: "active", capacity: 52, plate: "HAMP-147" },
-  { id: "v10", name: "Jitney 118", type: "Jitney", status: "active", capacity: 52, plate: "HAMP-118" },
-  { id: "v11", name: "Ambassador 312", type: "Ambassador", status: "active", capacity: 30, plate: "HAMP-160" },
-  { id: "v12", name: "Ambassador 315", type: "Ambassador", status: "active", capacity: 30, plate: "HAMP-154" },
-];
-
-export const crew: Crew[] = [
-  { id: "c1", name: "Patricia T.", role: "driver", status: "available", phone: "555-0101" },
-  { id: "c2", name: "Brent", role: "driver", status: "assigned", phone: "555-0102" },
-  { id: "c3", name: "Patricia 2", role: "driver", status: "assigned", phone: "555-0103" },
-  { id: "c4", name: "Vance", role: "driver", status: "available", phone: "555-0104" },
-  { id: "c5", name: "K Singh", role: "driver", status: "assigned", phone: "555-0105" },
-  { id: "c6", name: "Alex M", role: "driver", status: "assigned", phone: "555-0106" },
-  { id: "c7", name: "Brent I.", role: "driver", status: "off-duty", phone: "555-0107" },
-  { id: "c8", name: "Johnny", role: "driver", status: "available", phone: "555-0108" },
-  { id: "c9", name: "Susan", role: "attendant", status: "assigned", phone: "555-0109" },
-  { id: "c10", name: "Rich H", role: "driver", status: "assigned", phone: "555-0110" },
-  { id: "c11", name: "Francis", role: "driver", status: "available", phone: "555-0111" },
-  { id: "c12", name: "Olga", role: "attendant", status: "assigned", phone: "555-0112" },
-  { id: "c13", name: "Robert", role: "driver", status: "available", phone: "555-0113" },
-  { id: "c14", name: "Luis", role: "driver", status: "assigned", phone: "555-0114" },
-  { id: "c15", name: "Justine", role: "attendant", status: "assigned", phone: "555-0115" },
-];
-
 // Helper to generate passengers
+// ... existing generatePassengers ...
 const generatePassengers = (count: number): Passenger[] => {
   const names = ["Chodor, Benjamin", "Stewart, Katrina", "Brumlik, John", "Cordova, Paola", "Boyce, Brent", "Mancini, Jeff", "Penuel, Brad", "Montague, Mark", "Arnao, Byron", "Gonzalez, Angel", "Gomberg, Maxwell", "Kernan, Jim", "Giamatteo, John", "McGuckin, Joseph"];
   return Array.from({ length: count }).map((_, i) => ({
@@ -114,6 +89,7 @@ const generatePassengers = (count: number): Passenger[] => {
 };
 
 // Helper to generate stops
+// ... existing generateStops ...
 const generateStops = (startTime: Date): Stop[] => [
   { id: "s1", name: "East Hampton", time: startTime, type: "pickup", status: "open" },
   { id: "s2", name: "Southampton", time: addMinutes(startTime, 30), type: "pickup", status: "open" },
@@ -127,6 +103,15 @@ const createTrip = (id: string, packId: string, route: string, vehicleId: string
   const capacity = 54;
   const passengerCount = Math.floor(Math.random() * 40);
   
+  // Parse packId to generate legs
+  // e.g. "1 + 32" -> ["1", "32"]
+  const legIds = packId.split(/\s+\+\s+/);
+  const legs: TripLeg[] = legIds.map((lid, idx) => ({
+    id: lid,
+    status: Math.random() > 0.7 ? "completed" : Math.random() > 0.5 ? "en-route" : "scheduled",
+    direction: idx % 2 === 0 ? "westbound" : "eastbound"
+  }));
+
   return {
     id,
     packId,
@@ -142,6 +127,7 @@ const createTrip = (id: string, packId: string, route: string, vehicleId: string
     reservedCount: passengerCount,
     status: "scheduled",
     hasAda: Math.random() > 0.8,
+    legs,
     passengers: generatePassengers(passengerCount),
     stops: generateStops(departureTime)
   };
