@@ -95,16 +95,23 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
   
   const status = resource.status;
 
-  // Status Colors
-  const getStatusColor = (s: string) => {
-    switch(s) {
-        case 'assigned': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900';
-        case 'available': return 'border-blue-500 bg-blue-50/50 text-blue-900';
-        case 'off-duty': return 'border-gray-400 bg-gray-50/50 text-gray-600';
-        case 'active': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Vehicle
-        case 'maintenance': return 'border-amber-500 bg-amber-50/50 text-amber-900'; // Vehicle
-        case 'cleaning': return 'border-purple-500 bg-purple-50/50 text-purple-900'; // Vehicle
-        default: return 'border-muted bg-muted/20';
+  // Status/Type Colors
+  const getResourceColor = (r: Crew | Vehicle) => {
+    if ('plate' in r) {
+        // Vehicle Coloring by Type
+        const v = r as Vehicle;
+        switch(v.type) {
+            case 'Jitney': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Green (51-54 pax)
+            case 'Ambassador': return 'border-amber-500 bg-amber-50/50 text-amber-900'; // Gold/Amber (30 pax)
+            case 'Coach': return 'border-blue-500 bg-blue-50/50 text-blue-900'; // Smaller Coaches (30-40)
+            case 'Trolley': return 'border-red-500 bg-red-50/50 text-red-900'; // Trolley (~35 pax)
+            case 'SCT': return 'border-purple-500 bg-purple-50/50 text-purple-900'; // Suffolk County Transit
+            case 'Charter': return 'border-slate-500 bg-slate-50/50 text-slate-900';
+            default: return 'border-muted bg-muted/20';
+        }
+    } else {
+        // Crew - No Status Colors (Neutral)
+        return 'border-border bg-card hover:bg-accent/5 text-foreground';
     }
   };
 
@@ -120,8 +127,8 @@ const DraggableResource = ({ resource, type, compact = false, onContextMenu }: {
       )}
     >
       <div className={cn(
-        "flex items-center border-l-[3px] rounded-r-md border-y border-r bg-card pl-2 pr-2 py-2 shadow-sm hover:shadow-md transition-all",
-        getStatusColor(status),
+        "flex items-center border-l-[3px] rounded-r-md border-y border-r pl-2 pr-2 py-2 shadow-sm hover:shadow-md transition-all",
+        getResourceColor(resource),
         compact ? "py-1 text-xs" : ""
       )}>
         <GripVertical className="h-4 w-4 text-muted-foreground/30 shrink-0 mr-2" />
@@ -176,14 +183,15 @@ const DroppableCell = ({ id, children, accept, isOver }: { id: string, children:
 };
 
 // Multi-select Component for Drivers/Attendants
-const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon, onResourceRightClick, onResourceClick }: { 
+const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon, onResourceRightClick, onResourceClick, onEmptyContextMenu }: { 
   values: string[], 
   options: any[], 
   onChange: (ids: string[]) => void, 
   placeholder: string,
   icon: any,
   onResourceRightClick?: (id: string, type: ResourceType) => void,
-  onResourceClick?: (id: string, type: ResourceType) => void
+  onResourceClick?: (id: string, type: ResourceType) => void,
+  onEmptyContextMenu?: (e: React.MouseEvent) => void
 }) => {
   const [open, setOpen] = useState(false);
   
@@ -236,7 +244,16 @@ const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Ico
         {/* 2. Popover Trigger Layer (Fill Space) */}
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <div className="w-full h-full flex items-center px-2 hover:bg-muted/50 cursor-pointer">
+                <div 
+                    className="w-full h-full flex items-center px-2 hover:bg-muted/50 cursor-pointer"
+                    onContextMenu={(e) => {
+                        if (onEmptyContextMenu) {
+                             // e.stopPropagation(); // Don't stop propagation here, let it bubble to cell if handled there, or handle it explicitly
+                             // Wait, PopoverTrigger might interfere. Let's use the handler passed in.
+                             onEmptyContextMenu(e);
+                        }
+                    }}
+                >
                     {/* Placeholder if empty */}
                     {values.length === 0 && (
                         <div className="flex items-center gap-2 text-muted-foreground/50 text-sm pointer-events-none">
@@ -1402,6 +1419,7 @@ export default function HybridLineup() {
                                       icon={Bus}
                                       onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
                                       onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
+                                      onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -1420,6 +1438,7 @@ export default function HybridLineup() {
                                         icon={User}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('driver', id)}
+                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1435,6 +1454,7 @@ export default function HybridLineup() {
                                         icon={Shield}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
+                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.left!.id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1526,6 +1546,7 @@ export default function HybridLineup() {
                                       icon={Bus}
                                       onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'vehicle', id)}
                                       onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
+                                      onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                     />
                                   </DroppableCell>
                                 )}
@@ -1544,6 +1565,7 @@ export default function HybridLineup() {
                                         icon={User}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'driver', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('driver', id)}
+                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                       />
                                     </DroppableCell>
                                   )}
@@ -1559,6 +1581,7 @@ export default function HybridLineup() {
                                         icon={Shield}
                                         onResourceRightClick={(id, type) => handleContextMenu({ preventDefault: () => {}, stopPropagation: () => {} } as any, 'attendant', id)}
                                         onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
+                                        onEmptyContextMenu={(e) => handleContextMenu(e, 'trip', row.right!.id)}
                                       />
                                     </DroppableCell>
                                   )}
