@@ -71,6 +71,39 @@ export interface Trip {
 
 const today = startOfToday();
 
+export const vehicles: Vehicle[] = [
+  { id: "v1", name: "Jitney 101", type: "Jitney", status: "active", capacity: 54, plate: "NY-J101" },
+  { id: "v2", name: "Jitney 102", type: "Jitney", status: "active", capacity: 54, plate: "NY-J102" },
+  { id: "v3", name: "Ambassador 201", type: "Ambassador", status: "active", capacity: 40, plate: "NY-A201" },
+  { id: "v4", name: "Ambassador 202", type: "Ambassador", status: "maintenance", capacity: 40, plate: "NY-A202" },
+  { id: "v5", name: "Charter 301", type: "Charter", status: "active", capacity: 60, plate: "NY-C301" },
+  { id: "v6", name: "Jitney 103", type: "Jitney", status: "active", capacity: 54, plate: "NY-J103" },
+  { id: "v7", name: "Jitney 104", type: "Jitney", status: "cleaning", capacity: 54, plate: "NY-J104" },
+  { id: "v8", name: "Ambassador 203", type: "Ambassador", status: "active", capacity: 40, plate: "NY-A203" },
+  { id: "v9", name: "Charter 302", type: "Charter", status: "active", capacity: 60, plate: "NY-C302" },
+  { id: "v10", name: "Jitney 105", type: "Jitney", status: "active", capacity: 54, plate: "NY-J105" },
+  { id: "v11", name: "Jitney 106", type: "Jitney", status: "active", capacity: 54, plate: "NY-J106" },
+  { id: "v12", name: "Ambassador 204", type: "Ambassador", status: "active", capacity: 40, plate: "NY-A204" },
+];
+
+export const crew: Crew[] = [
+  { id: "c1", name: "John Smith", role: "driver", status: "assigned", phone: "555-0101" },
+  { id: "c2", name: "Jane Doe", role: "driver", status: "available", phone: "555-0102" },
+  { id: "c3", name: "Mike Johnson", role: "driver", status: "off-duty", phone: "555-0103" },
+  { id: "c4", name: "Sarah Wilson", role: "attendant", status: "assigned", phone: "555-0104" },
+  { id: "c5", name: "Tom Brown", role: "driver", status: "available", phone: "555-0105" },
+  { id: "c6", name: "Emily Davis", role: "attendant", status: "available", phone: "555-0106" },
+  { id: "c7", name: "David Miller", role: "driver", status: "assigned", phone: "555-0107" },
+  { id: "c8", name: "Lisa Taylor", role: "attendant", status: "off-duty", phone: "555-0108" },
+  { id: "c9", name: "James Anderson", role: "attendant", status: "assigned", phone: "555-0109" },
+  { id: "c10", name: "Robert Thomas", role: "driver", status: "available", phone: "555-0110" },
+  { id: "c11", name: "Jennifer Jackson", role: "attendant", status: "available", phone: "555-0111" },
+  { id: "c12", name: "William White", role: "attendant", status: "assigned", phone: "555-0112" },
+  { id: "c13", name: "Charles Harris", role: "driver", status: "available", phone: "555-0113" },
+  { id: "c14", name: "Patricia Martin", role: "driver", status: "assigned", phone: "555-0114" },
+  { id: "c15", name: "Linda Thompson", role: "attendant", status: "assigned", phone: "555-0115" },
+];
+
 // Helper to generate passengers
 // ... existing generatePassengers ...
 const generatePassengers = (count: number): Passenger[] => {

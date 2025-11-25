@@ -408,7 +408,7 @@ export default function HybridLineup() {
     if (!drawerContent) return null;
 
     if (drawerContent.type === 'vehicle') {
-      const v = vehicles.find(x => x.id === drawerContent.id);
+      const v = vehicles.find((x: Vehicle) => x.id === drawerContent.id);
       if (!v) return null;
       return (
         <div className="space-y-6">
@@ -445,7 +445,7 @@ export default function HybridLineup() {
     }
 
     if (drawerContent.type === 'driver' || drawerContent.type === 'attendant') {
-      const c = crew.find(x => x.id === drawerContent.id);
+      const c = crew.find((x: Crew) => x.id === drawerContent.id);
       if (!c) return null;
       return (
         <div className="space-y-6">
@@ -497,9 +497,9 @@ export default function HybridLineup() {
     }
 
     if (drawerContent.type === 'trip') {
-      const t = localTrips.find(x => x.id === drawerContent.id);
+      const t = localTrips.find((x: Trip) => x.id === drawerContent.id);
       if (!t) return null;
-      const leg = t.legs?.find(l => l.id === drawerContent.legId);
+      const leg = t.legs?.find((l: TripLeg) => l.id === drawerContent.legId);
 
       return (
         <Tabs defaultValue="manifest" className="w-full h-full flex flex-col">
@@ -681,7 +681,7 @@ export default function HybridLineup() {
                       <Bus className="h-3.5 w-3.5" /> Vehicles
                     </h3>
                     <div className="space-y-1">
-                      {vehicles.map(v => (
+                      {vehicles.map((v: Vehicle) => (
                         <DraggableResource 
                           key={v.id} 
                           resource={v} 
@@ -698,7 +698,7 @@ export default function HybridLineup() {
                       <User className="h-3.5 w-3.5" /> Drivers
                     </h3>
                     <div className="space-y-1">
-                      {crew.filter(c => c.role === 'driver').map(c => (
+                      {crew.filter((c: Crew) => c.role === 'driver').map((c: Crew) => (
                         <DraggableResource 
                           key={c.id} 
                           resource={c} 
@@ -715,7 +715,7 @@ export default function HybridLineup() {
                       <Shield className="h-3.5 w-3.5" /> Attendants
                     </h3>
                     <div className="space-y-1">
-                      {crew.filter(c => c.role === 'attendant').map(c => (
+                      {crew.filter((c: Crew) => c.role === 'attendant').map((c: Crew) => (
                         <DraggableResource 
                           key={c.id} 
                           resource={c} 
