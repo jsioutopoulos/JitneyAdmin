@@ -246,61 +246,129 @@ const EditableText = ({ value, onChange, className, onContextMenu }: { value: st
 
 const DigitalGridView = ({ trips }: { trips: Trip[] }) => {
   return (
-    <div className="p-4 overflow-auto h-full">
-      <div className="border rounded-md bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">Trip</TableHead>
-              <TableHead>Line</TableHead>
-              <TableHead className="text-right">Cap</TableHead>
-              <TableHead className="text-right">Res</TableHead>
-              <TableHead className="text-right">Avl</TableHead>
-              <TableHead className="text-center">Stat</TableHead>
-              <TableHead className="text-center">Notes</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trips.flatMap(t => t.legs ? t.legs.map(l => ({ ...l, parent: t })) : [{ id: t.id, status: t.status, direction: t.direction, parent: t }]).map((item, idx) => (
-               <TableRow key={`${item.parent.id}-${item.id}-${idx}`} className="hover:bg-muted/5">
-                  <TableCell className="font-bold font-mono">{item.id}</TableCell>
-                  <TableCell>
-                     <Badge variant={item.parent.direction === 'westbound' ? "default" : "secondary"} className={cn(
-                        "h-6 w-6 rounded-full p-0 flex items-center justify-center text-[10px]",
-                        item.parent.direction === 'westbound' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-500 hover:bg-amber-600"
-                     )}>
-                        {item.parent.direction === 'westbound' ? 'W' : 'E'}
-                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">{item.parent.capacity}</TableCell>
-                  <TableCell className="text-right font-medium">{item.parent.reservedCount}</TableCell>
-                  <TableCell className="text-right font-bold text-emerald-600">{item.parent.capacity - item.parent.reservedCount}</TableCell>
-                  <TableCell className="text-center">
-                     <Badge variant="outline" className={cn(
-                        "text-[10px] uppercase",
-                        item.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
-                        item.status === 'completed' && "bg-gray-100 text-gray-500 border-gray-200",
-                        item.status === 'scheduled' && "bg-emerald-50 text-emerald-600 border-emerald-200"
-                     )}>
-                        {item.status}
-                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                     {item.parent.hasAda && <Accessibility className="h-4 w-4 inline text-blue-500" />}
-                  </TableCell>
-                  <TableCell className="text-right">
-                     <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">List</Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">Stops</Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">Data</Button>
-                     </div>
-                  </TableCell>
-               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+    <div className="p-6 h-full overflow-hidden flex flex-col">
+      <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md">
+        <CardHeader className="px-6 py-4 border-b bg-muted/5 shrink-0">
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle className="text-xl font-bold tracking-tight">Active Trips</CardTitle>
+                    <CardDescription>Real-time monitoring of all scheduled, active, and completed trips.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="Search trips..." className="pl-8 w-[250px] bg-background" />
+                    </div>
+                    <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon"><Settings className="h-4 w-4" /></Button>
+                    <Button className="bg-primary text-primary-foreground shadow-sm gap-2">
+                        <Plus className="h-4 w-4" /> New Trip
+                    </Button>
+                </div>
+            </div>
+        </CardHeader>
+        <div className="flex-1 overflow-auto bg-card">
+            <Table>
+                <TableHeader className="bg-muted/5 sticky top-0 z-10 shadow-sm">
+                    <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[100px] font-bold">Trip ID</TableHead>
+                        <TableHead className="w-[180px] font-bold">Route</TableHead>
+                        <TableHead className="w-[120px] font-bold">Status</TableHead>
+                        <TableHead className="font-bold">Vehicle</TableHead>
+                        <TableHead className="font-bold">Crew</TableHead>
+                        <TableHead className="text-right font-bold">Passengers</TableHead>
+                        <TableHead className="text-right font-bold">Time</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {trips.map((trip) => (
+                        <TableRow key={trip.id} className="group hover:bg-muted/5 transition-colors">
+                            <TableCell className="font-mono font-medium text-primary">
+                                {trip.packId || trip.id.toUpperCase()}
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{trip.route}</span>
+                                    <span className="text-xs text-muted-foreground capitalize">{trip.direction}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant="secondary" className={cn(
+                                    "font-medium capitalize shadow-sm border",
+                                    trip.status === 'en-route' && "bg-blue-100 text-blue-700 border-blue-200",
+                                    trip.status === 'scheduled' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                    trip.status === 'completed' && "bg-gray-100 text-gray-600 border-gray-200",
+                                    trip.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200"
+                                )}>
+                                    {trip.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                                {trip.vehicleId ? (
+                                    <div className="flex items-center gap-2">
+                                        <Bus className="h-4 w-4 text-muted-foreground" />
+                                        <span className="font-mono text-sm">
+                                            {vehicles.find(v => v.id === trip.vehicleId)?.plate}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-muted-foreground italic text-xs">Unassigned</span>
+                                )}
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                    {trip.driverIds.length > 0 ? (
+                                        trip.driverIds.map(did => (
+                                            <Badge key={did} variant="outline" className="text-[10px] bg-background">
+                                                {crew.find(c => c.id === did)?.name.split(' ')[0]}
+                                            </Badge>
+                                        ))
+                                    ) : (
+                                        <span className="text-muted-foreground italic text-xs">No Driver</span>
+                                    )}
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex flex-col items-end">
+                                    <span className="font-bold text-sm tabular-nums">
+                                        {trip.reservedCount} / {trip.capacity}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        {Math.round((trip.reservedCount / trip.capacity) * 100)}% Full
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex flex-col items-end">
+                                    <span className="font-medium tabular-nums text-sm">
+                                        {format(trip.departureTime, "HH:mm")}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        Est. Arr {format(trip.arrivalTime, "HH:mm")}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+        <div className="border-t p-4 bg-muted/5 flex items-center justify-between shrink-0">
+            <div className="text-xs text-muted-foreground">
+                Showing <strong>{trips.length}</strong> active trips
+            </div>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled>Previous</Button>
+                <Button variant="outline" size="sm" disabled>Next</Button>
+            </div>
+        </div>
+      </Card>
     </div>
   )
 }
