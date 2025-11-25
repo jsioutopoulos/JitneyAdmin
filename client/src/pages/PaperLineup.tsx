@@ -375,29 +375,44 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
   const getLineBrand = (trip: Trip, vehicleId: string | null) => {
     // Determine Brand
     let brand = 'Jitney';
-    let brandColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    let brandColor = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Default Jitney Green
     
+    // Determine Line
+    let line = 'Montauk'; // Default
+    let lineColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'; // Default Green
+
+    const r = trip.route.toLowerCase();
+
     // Check vehicle type first if assigned
     if (vehicleId) {
         const v = vehicles.find(v => v.id === vehicleId);
         if (v && v.type === 'Ambassador') {
             brand = 'Ambassador';
             brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
+            line = 'Ambassador';
+            lineColor = 'text-blue-700 bg-blue-50 border-blue-200';
         }
     } 
-    // Fallback to route heuristics if no vehicle or just generally
-    else if (trip.route.toLowerCase().includes('ambassador')) {
+    // Fallback to route heuristics
+    else if (r.includes('ambassador')) {
         brand = 'Ambassador';
         brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
+        line = 'Ambassador';
+        lineColor = 'text-blue-700 bg-blue-50 border-blue-200';
     }
 
-    // Determine Line
-    let line = 'Montauk'; // Default
-    const r = trip.route.toLowerCase();
-    if (r.includes('westhampton')) line = 'Westhampton';
-    else if (r.includes('north fork') || r.includes('greenport')) line = 'North Fork';
+    // If not Ambassador, determine line by route
+    if (brand !== 'Ambassador') {
+        if (r.includes('westhampton')) {
+            line = 'Westhampton';
+            lineColor = 'text-yellow-700 bg-yellow-50 border-yellow-200';
+        } else if (r.includes('north fork') || r.includes('greenport')) {
+            line = 'North Fork';
+            lineColor = 'text-purple-700 bg-purple-50 border-purple-200';
+        }
+    }
     
-    return { brand, brandColor, line };
+    return { brand, brandColor, line, lineColor };
   };
 
   return (
@@ -464,9 +479,9 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                             <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider border", brandColor)}>
                                 {brand}
                             </Badge>
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                {line} Line
-                            </span>
+                            <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5 font-medium uppercase tracking-wide border bg-opacity-50", lineColor)}>
+                                {line}
+                            </Badge>
                         </div>
 
                         <div className="flex items-start justify-between">
@@ -540,15 +555,17 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
                     </TableHeader>
                     <TableBody>
                         {filteredItems.map((item, idx) => {
-                            const { brand, brandColor, line } = getLineBrand(item.parent, item.parent.vehicleId);
+                            const { brand, brandColor, line, lineColor } = getLineBrand(item.parent, item.parent.vehicleId);
                             return (
                             <TableRow key={`${item.parent.id}-${item.id}-${idx}`} className="group hover:bg-muted/5">
                                 <TableCell>
-                                    <div className="flex flex-col gap-1">
+                                    <div className="flex flex-col gap-1 items-start">
                                         <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-bold uppercase tracking-wider border", brandColor)}>
                                             {brand}
                                         </Badge>
-                                        <span className="text-[9px] text-muted-foreground font-medium uppercase">{line}</span>
+                                        <Badge variant="secondary" className={cn("w-fit text-[9px] h-4 px-1 font-medium uppercase tracking-wide border bg-opacity-50", lineColor)}>
+                                            {line}
+                                        </Badge>
                                     </div>
                                 </TableCell>
                                 <TableCell className="font-medium">
