@@ -763,9 +763,11 @@ export default function HybridLineup() {
     return () => window.removeEventListener('click', handleClick);
   }, []);
 
-  // Split trips logic
-  const leftColTrips = localTrips.filter((_, i) => i % 2 === 0);
-  const rightColTrips = localTrips.filter((_, i) => i % 2 !== 0);
+  // Split trips logic - Snake Column (First half left, Second half right)
+  const splitIndex = Math.ceil(localTrips.length / 2);
+  const leftColTrips = localTrips.slice(0, splitIndex);
+  const rightColTrips = localTrips.slice(splitIndex);
+  
   const maxRows = Math.max(leftColTrips.length, rightColTrips.length, 20);
   const emptyRows = Array.from({ length: maxRows }).map((_, i) => ({
     left: leftColTrips[i] || null,
@@ -1542,8 +1544,8 @@ export default function HybridLineup() {
                <DigitalGridView trips={localTrips} onAction={handleDrawerAction} />
             ) : (
               /* Scrollable Grid (Paper View) */
-              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible">
-                <div className="bg-card w-[1400px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible pb-32">
+                <div className="bg-card w-[1400px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full overflow-hidden flex flex-col mb-10">
                   
                   {/* Header */}
                   <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5 shrink-0">
