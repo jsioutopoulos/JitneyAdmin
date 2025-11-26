@@ -467,7 +467,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4 pb-32">
         {view === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredItems.map((item, idx) => {
@@ -1569,8 +1569,8 @@ export default function HybridLineup() {
                <DigitalGridView trips={localTrips} onAction={handleDrawerAction} />
             ) : (
               /* Scrollable Grid (Paper View) */
-              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible pb-48">
-                <div className="bg-card w-[1400px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full flex flex-col mb-10">
+              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible pb-96">
+                <div className="bg-card w-[1400px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full flex flex-col mb-20">
                   
                   {/* Header */}
                   <div className="border-b border-border p-6 flex justify-between items-start bg-muted/5 shrink-0">
