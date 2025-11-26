@@ -1569,7 +1569,7 @@ export default function HybridLineup() {
                <DigitalGridView trips={localTrips} onAction={handleDrawerAction} />
             ) : (
               /* Scrollable Grid (Paper View) */
-              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible pb-96">
+              <div className="flex-1 overflow-auto p-8 flex justify-center print:p-0 print:overflow-visible pb-[500px]">
                 <div className="bg-card w-[1400px] min-h-[800px] shadow-xl border border-border/60 rounded-sm relative text-card-foreground font-sans text-sm print:shadow-none print:border-none print:w-full flex flex-col mb-20">
                   
                   {/* Header */}
