@@ -768,6 +768,17 @@ export default function HybridLineup() {
   const feederTripsList = localTrips.filter(t => t.category === 'feeder');
   const charterTripsList = localTrips.filter(t => t.category === 'charter');
 
+  // Split trips logic - Snake Column (First half left, Second half right)
+  const splitIndex = Math.ceil(lineupTrips.length / 2);
+  const leftColTrips = lineupTrips.slice(0, splitIndex);
+  const rightColTrips = lineupTrips.slice(splitIndex);
+  
+  const maxRows = Math.max(leftColTrips.length, rightColTrips.length, 20);
+  const emptyRows = Array.from({ length: maxRows }).map((_, i) => ({
+    left: leftColTrips[i] || null,
+    right: rightColTrips[i] || null
+  }));
+
   // Split logic for Feeders
   const splitFeederIndex = Math.ceil(feederTripsList.length / 2);
   const leftFeederTrips = feederTripsList.slice(0, splitFeederIndex);
