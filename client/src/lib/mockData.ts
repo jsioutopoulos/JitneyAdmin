@@ -67,6 +67,7 @@ export interface Trip {
   legs?: TripLeg[];
   notes?: string;
   hasAda?: boolean;
+  category?: "lineup" | "feeder" | "charter";
   passengers: Passenger[];
   stops: Stop[];
 }
@@ -170,7 +171,8 @@ const createTrip = (id: string, packId: string, route: string, vehicleId: string
     hasAda: Math.random() > 0.8,
     legs,
     passengers: generatePassengers(passengerCount),
-    stops: generateStops(departureTime)
+    stops: generateStops(departureTime),
+    category: "lineup"
   };
 };
 
@@ -296,4 +298,18 @@ export const trips: Trip[] = [
   // Row 30
   createTrip("t59", "677 + 690", "Chain", "v12", "c14", null),
   createTrip("t60", "999", "Extra", null, null, null),
+];
+
+export const feederTrips: Trip[] = [
+  { ...createTrip("f1", "S1", "Riverhead Loop", "v7", "c16", null), category: "feeder" },
+  { ...createTrip("f2", "S2", "Patchogue Connection", "v7", "c18", null), category: "feeder" },
+  { ...createTrip("f3", "S3", "Stony Brook Shuttle", null, null, null), category: "feeder" },
+  { ...createTrip("f4", "S4", "Orient Point Ferry", "v7", "c20", null), category: "feeder" },
+];
+
+export const charterTrips: Trip[] = [
+  { ...createTrip("ch1", "Wedding", "Smith Wedding - Montauk", "v1", "c17", "c19"), category: "charter" },
+  { ...createTrip("ch2", "Corp", "Google Outing", "v2", "c16", null), category: "charter" },
+  { ...createTrip("ch3", "School", "SBU Athletics", "v4", null, null), category: "charter" },
+  { ...createTrip("ch4", "Private", "Hamptons Wine Tour", "v3", "c18", "c19"), category: "charter" },
 ];

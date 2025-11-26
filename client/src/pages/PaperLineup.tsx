@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger, TripLeg } from "@/lib/mockData";
+import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger, TripLeg, feederTrips, charterTrips } from "@/lib/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
@@ -621,7 +621,7 @@ const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: 
 // --- Main Component ---
 
 export default function HybridLineup() {
-  const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
+  const [localTrips, setLocalTrips] = useState<Trip[]>([...trips, ...feederTrips, ...charterTrips]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeDragItem, setActiveDragItem] = useState<DraggableData | null>(null);
   const [viewMode, setViewMode] = useState<'paper' | 'digital'>('paper');
@@ -763,10 +763,15 @@ export default function HybridLineup() {
     return () => window.removeEventListener('click', handleClick);
   }, []);
 
+  // Filter trips by category
+  const lineupTrips = localTrips.filter(t => !t.category || t.category === 'lineup');
+  const feederTripsList = localTrips.filter(t => t.category === 'feeder');
+  const charterTripsList = localTrips.filter(t => t.category === 'charter');
+
   // Split trips logic - Snake Column (First half left, Second half right)
-  const splitIndex = Math.ceil(localTrips.length / 2);
-  const leftColTrips = localTrips.slice(0, splitIndex);
-  const rightColTrips = localTrips.slice(splitIndex);
+  const splitIndex = Math.ceil(lineupTrips.length / 2);
+  const leftColTrips = lineupTrips.slice(0, splitIndex);
+  const rightColTrips = lineupTrips.slice(splitIndex);
   
   const maxRows = Math.max(leftColTrips.length, rightColTrips.length, 20);
   const emptyRows = Array.from({ length: maxRows }).map((_, i) => ({
@@ -1832,12 +1837,149 @@ export default function HybridLineup() {
                     </div>
                   </div>
 
-                  {/* Footer (Static) */}
-                  <div className="flex h-32 bg-muted/5 border-t border-border shrink-0">
-                     {/* Placeholder footer content */}
-                     <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic">
-                        Scrollable Footer Area (Charters / Feeders)
+                  {/* Footer (Feeders & Charters) */}
+                  <div className="flex flex-col border-t border-border shrink-0 bg-card">
+                     
+                     {/* Suffolk County Feeder Section */}
+                     <div className="flex flex-col border-b border-border">
+                        <div className="bg-purple-50/50 border-b border-border p-2 px-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-purple-900">Suffolk County Feeder</h3>
+                        </div>
+                        <div className="flex flex-col">
+                            {feederTripsList.map((trip, idx) => (
+                                <div key={trip.id} className="flex min-h-[48px] h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                                    {/* Trip ID */}
+                                    <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex items-center justify-center px-1">
+                                        <EditableText 
+                                            value={trip.packId || trip.id.toUpperCase()} 
+                                            onChange={(val) => handleUpdateTrip(trip.id, 'packId', val)}
+                                            className="text-sm font-bold text-primary text-center font-mono"
+                                            onContextMenu={(e) => handleContextMenu(e, 'trip', trip.id)}
+                                        />
+                                    </div>
+                                    
+                                    {/* Vehicle */}
+                                    <div className="w-[20%] border-r border-border p-0 relative">
+                                        <DroppableCell id={`${trip.id}:vehicleId`} accept={['vehicle']}>
+                                            <MultiResourceSelect 
+                                                values={trip.vehicleId ? [trip.vehicleId] : []}
+                                                options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1] }))}
+                                                onChange={(ids) => handleUpdateTrip(trip.id, 'vehicleId', ids[0] || null)}
+                                                placeholder="Bus"
+                                                icon={Bus}
+                                                onResourceRightClick={(e, id, type) => handleContextMenu(e, 'vehicle', id)}
+                                                onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
+                                            />
+                                        </DroppableCell>
+                                    </div>
+
+                                    {/* Crew */}
+                                    <div className="w-[65%] flex divide-x divide-border/50">
+                                        <div className="flex-1 relative">
+                                            <DroppableCell id={`${trip.id}:driverIds`} accept={['driver']}>
+                                                <MultiResourceSelect 
+                                                    values={trip.driverIds || []}
+                                                    options={crew.filter(c => c.role === 'driver')}
+                                                    onChange={(ids) => handleUpdateTrip(trip.id, 'driverIds', ids)}
+                                                    placeholder="Drivers"
+                                                    icon={User}
+                                                    onResourceRightClick={(e, id, type) => handleContextMenu(e, 'driver', id)}
+                                                    onResourceClick={(id, type) => handleDrawerAction('driver', id)}
+                                                />
+                                            </DroppableCell>
+                                        </div>
+                                        <div className="flex-1 relative">
+                                            <DroppableCell id={`${trip.id}:attendantIds`} accept={['attendant']}>
+                                                <MultiResourceSelect 
+                                                    values={trip.attendantIds || []}
+                                                    options={crew.filter(c => c.role === 'attendant')}
+                                                    onChange={(ids) => handleUpdateTrip(trip.id, 'attendantIds', ids)}
+                                                    placeholder="Attendants"
+                                                    icon={Shield}
+                                                    onResourceRightClick={(e, id, type) => handleContextMenu(e, 'attendant', id)}
+                                                    onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
+                                                />
+                                            </DroppableCell>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {feederTripsList.length === 0 && (
+                                <div className="p-4 text-center text-muted-foreground text-xs italic">No feeder trips scheduled</div>
+                            )}
+                        </div>
                      </div>
+
+                     {/* Charters Section */}
+                     <div className="flex flex-col">
+                        <div className="bg-amber-50/50 border-b border-border p-2 px-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-amber-900">Charters</h3>
+                        </div>
+                        <div className="flex flex-col">
+                            {charterTripsList.map((trip, idx) => (
+                                <div key={trip.id} className="flex min-h-[48px] h-[48px] border-b border-border last:border-b-0 group hover:bg-muted/10 transition-colors">
+                                    {/* Trip ID */}
+                                    <div className="w-[15%] border-r border-border bg-muted/5 group-hover:bg-muted/10 flex items-center justify-center px-1">
+                                        <EditableText 
+                                            value={trip.packId || trip.id.toUpperCase()} 
+                                            onChange={(val) => handleUpdateTrip(trip.id, 'packId', val)}
+                                            className="text-sm font-bold text-primary text-center font-mono"
+                                            onContextMenu={(e) => handleContextMenu(e, 'trip', trip.id)}
+                                        />
+                                    </div>
+                                    
+                                    {/* Vehicle */}
+                                    <div className="w-[20%] border-r border-border p-0 relative">
+                                        <DroppableCell id={`${trip.id}:vehicleId`} accept={['vehicle']}>
+                                            <MultiResourceSelect 
+                                                values={trip.vehicleId ? [trip.vehicleId] : []}
+                                                options={vehicles.map(v => ({ id: v.id, name: v.plate.split('-')[1] }))}
+                                                onChange={(ids) => handleUpdateTrip(trip.id, 'vehicleId', ids[0] || null)}
+                                                placeholder="Bus"
+                                                icon={Bus}
+                                                onResourceRightClick={(e, id, type) => handleContextMenu(e, 'vehicle', id)}
+                                                onResourceClick={(id, type) => handleDrawerAction('vehicle', id)}
+                                            />
+                                        </DroppableCell>
+                                    </div>
+
+                                    {/* Crew */}
+                                    <div className="w-[65%] flex divide-x divide-border/50">
+                                        <div className="flex-1 relative">
+                                            <DroppableCell id={`${trip.id}:driverIds`} accept={['driver']}>
+                                                <MultiResourceSelect 
+                                                    values={trip.driverIds || []}
+                                                    options={crew.filter(c => c.role === 'driver')}
+                                                    onChange={(ids) => handleUpdateTrip(trip.id, 'driverIds', ids)}
+                                                    placeholder="Drivers"
+                                                    icon={User}
+                                                    onResourceRightClick={(e, id, type) => handleContextMenu(e, 'driver', id)}
+                                                    onResourceClick={(id, type) => handleDrawerAction('driver', id)}
+                                                />
+                                            </DroppableCell>
+                                        </div>
+                                        <div className="flex-1 relative">
+                                            <DroppableCell id={`${trip.id}:attendantIds`} accept={['attendant']}>
+                                                <MultiResourceSelect 
+                                                    values={trip.attendantIds || []}
+                                                    options={crew.filter(c => c.role === 'attendant')}
+                                                    onChange={(ids) => handleUpdateTrip(trip.id, 'attendantIds', ids)}
+                                                    placeholder="Attendants"
+                                                    icon={Shield}
+                                                    onResourceRightClick={(e, id, type) => handleContextMenu(e, 'attendant', id)}
+                                                    onResourceClick={(id, type) => handleDrawerAction('attendant', id)}
+                                                />
+                                            </DroppableCell>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {charterTripsList.length === 0 && (
+                                <div className="p-4 text-center text-muted-foreground text-xs italic">No charter trips scheduled</div>
+                            )}
+                        </div>
+                     </div>
+                     
                   </div>
 
                 </div>
