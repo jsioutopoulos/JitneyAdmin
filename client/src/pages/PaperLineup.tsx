@@ -1446,12 +1446,12 @@ export default function HybridLineup() {
             </div>
           ) : (
             // Collapsed Sidebar Rail
-            <div className="w-12 bg-background border-r border-border flex flex-col shadow-sm shrink-0 z-20 items-center py-4 gap-6">
+            <div className="w-12 bg-background border-r border-border flex flex-col shadow-sm shrink-0 z-20 items-center py-4 gap-8">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(true)}>
                     <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
                 </Button>
                 <Separator />
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-6">
                     <div className="group relative flex justify-center" title="Vehicles">
                         <Bus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                         <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{vehicles.length}</Badge>
@@ -1519,6 +1519,16 @@ export default function HybridLineup() {
                     <Package className="h-4 w-4 text-amber-500" />
                     <span className="hidden xl:inline">Freight</span>
                     <Badge variant="secondary" className="ml-1 h-5 px-1">12</Badge>
+                 </Button>
+                 <Button variant="outline" size="sm" className="h-9 gap-2 hidden lg:flex">
+                    <MapPin className="h-4 w-4 text-red-500" />
+                    <span className="hidden xl:inline">Islip</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1">5</Badge>
+                 </Button>
+                 <Button variant="outline" size="sm" className="h-9 gap-2 hidden lg:flex">
+                    <MapPin className="h-4 w-4 text-green-500" />
+                    <span className="hidden xl:inline">Farmingville</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1">8</Badge>
                  </Button>
                  <Separator orientation="vertical" className="h-6 mx-2 hidden lg:block" />
                  <Button variant="outline" size="sm" onClick={() => window.print()}>
