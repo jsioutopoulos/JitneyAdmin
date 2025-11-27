@@ -3,9 +3,9 @@ import { Layout } from "@/components/layout/Layout";
 import { trips, vehicles, crew, Trip, Crew, Vehicle, Stop, Passenger, TripLeg, feederTrips, charterTrips } from "@/lib/mockData";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { 
-  Printer, Check, Bus, User, Shield, AlertCircle, GripVertical, Plus, X, 
-  History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone, 
+import {
+  Printer, Bus, User, Shield, AlertCircle, X,
+  History, ChevronRight, ChevronLeft, MapPin, Navigation, Calendar, Phone,
   Star, Users, Accessibility, Package, Search, List, UserPlus,
   MoreHorizontal, Bell, Settings, Filter, Clock, Circle, LayoutGrid, Table as TableIcon,
   PanelLeftClose, PanelLeftOpen, Edit, ChevronDown
@@ -27,25 +27,10 @@ import {
 import {
   DndContext,
   DragOverlay,
-  useDraggable,
-  useDroppable,
   closestCorners,
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -62,236 +47,10 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import mapBg from "@assets/generated_images/subtle_topological_map_background.png";
-
-// --- Types & Helpers ---
-
-type ResourceType = 'vehicle' | 'driver' | 'attendant' | 'trip' | 'leg' | 'reservations' | 'stops' | 'seats';
-
-interface DraggableData {
-  type: ResourceType;
-  id: string;
-  data: any;
-}
-
-// --- Components ---
-
-const DraggableResource = ({ resource, type, compact = false, onContextMenu }: { resource: Crew | Vehicle, type: ResourceType, compact?: boolean, onContextMenu?: (e: React.MouseEvent) => void }) => {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `resource-${type}-${resource.id}`,
-    data: { type, id: resource.id, data: resource } as DraggableData,
-  });
-
-  const displayName = 'name' in resource ? resource.name : (resource as Vehicle).plate;
-  // For vehicles, use 'capacity' as subtext; for crew, use 'role'
-  // Add report time for crew
-  let subText = '';
-  if ('plate' in resource) {
-    subText = `Cap: ${(resource as Vehicle).capacity}`;
-  } else {
-    const crew = resource as Crew;
-    // Format: Role • Time [Badge]
-    subText = `${crew.role}`;
-  }
-  
-  const status = resource.status;
-
-  // Status/Type Colors
-  const getResourceColor = (r: Crew | Vehicle) => {
-    if ('plate' in r) {
-        // Vehicle Coloring by Type
-        const v = r as Vehicle;
-        switch(v.type) {
-            case 'Coach': return 'border-emerald-500 bg-emerald-50/50 text-emerald-900'; // Green (Jitneys & Coaches)
-            case 'Ambassador': return 'border-blue-500 bg-blue-50/50 text-blue-900'; // Blue (30 pax)
-            case 'Trolley': return 'border-red-500 bg-red-50/50 text-red-900'; // Trolley (~35 pax)
-            case 'SCT': return 'border-purple-500 bg-purple-50/50 text-purple-900'; // Suffolk County Transit
-            default: return 'border-muted bg-muted/20';
-        }
-    } else {
-        // Crew - No Status Colors (Neutral)
-        return 'border-border bg-card hover:bg-accent/5 text-foreground';
-    }
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onContextMenu={onContextMenu}
-      className={cn(
-        "cursor-grab active:cursor-grabbing select-none group relative mb-2",
-        isDragging && "opacity-50",
-      )}
-    >
-      <div className={cn(
-        "flex items-center border-l-[3px] rounded-r-md border-y border-r pl-2 pr-2 py-2 shadow-sm hover:shadow-md transition-all",
-        getResourceColor(resource),
-        compact ? "py-1 text-xs" : ""
-      )}>
-        <GripVertical className="h-4 w-4 text-muted-foreground/30 shrink-0 mr-2" />
-        
-        <div className="flex-1 grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-            <div className="font-bold truncate text-sm leading-tight">
-                {displayName}
-            </div>
-            
-            {!("plate" in resource) && (resource as Crew).reportTime && (
-                <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-mono font-medium opacity-80">
-                        {format((resource as Crew).reportTime!, 'HH:mm')}
-                    </span>
-                    
-                    {(resource as Crew).reportDepot && (
-                         <Badge variant="secondary" className="text-[9px] h-4 px-1.5 font-bold tracking-wider opacity-90 bg-background/50 border-current">
-                            {(resource as Crew).reportDepot.substring(0, 3).toUpperCase()}
-                        </Badge>
-                    )}
-                </div>
-            )}
-
-            {'plate' in resource && (
-                 <div className="text-xs opacity-80 font-medium">
-                    {(resource as Vehicle).capacity} PAX
-                 </div>
-            )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DroppableCell = ({ id, children, accept, isOver }: { id: string, children: React.ReactNode, accept: ResourceType[], isOver?: boolean }) => {
-  const { setNodeRef, isOver: dndIsOver } = useDroppable({
-    id: id,
-    data: { accept }
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "h-full w-full relative transition-colors",
-        dndIsOver && "bg-primary/10 ring-2 ring-inset ring-primary/50 z-10"
-      )}
-    >
-      {children}
-    </div>
-  );
-};
-
-// Multi-select Component for Drivers/Attendants
-const MultiResourceSelect = ({ values, options, onChange, placeholder, icon: Icon, onResourceRightClick, onResourceClick, onEmptyContextMenu }: { 
-  values: string[], 
-  options: any[], 
-  onChange: (ids: string[]) => void, 
-  placeholder: string,
-  icon: any,
-  onResourceRightClick?: (e: React.MouseEvent, id: string, type: ResourceType) => void,
-  onResourceClick?: (id: string, type: ResourceType) => void,
-  onEmptyContextMenu?: (e: React.MouseEvent) => void
-}) => {
-  const [open, setOpen] = useState(false);
-  
-  const selectedItems = options.filter(o => values.includes(o.id));
-
-  const toggleItem = (id: string) => {
-    if (values.includes(id)) {
-      onChange(values.filter(v => v !== id));
-    } else {
-      onChange([...values, id]);
-    }
-  };
-
-  return (
-    <div className="w-full h-full relative group">
-        {/* 1. Render Badges Layer (Z-Index High) */}
-        {values.length > 0 && (
-            <div className="absolute inset-0 flex flex-wrap gap-1 items-center px-2 py-1 z-20 pointer-events-none">
-              {selectedItems.map(item => (
-                <Badge 
-                  key={item.id} 
-                  variant="secondary" 
-                  className="h-5 px-1 text-[10px] font-medium gap-1 hover:bg-primary/10 cursor-pointer transition-colors group/badge select-none pointer-events-auto shadow-sm border border-transparent hover:border-primary/20" 
-                  onContextMenu={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    onResourceRightClick?.(e, item.id, item.role || 'driver');
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (onResourceClick) {
-                        onResourceClick(item.id, item.role || 'driver');
-                    }
-                  }}
-                >
-                  {item.name}
-                  <X 
-                    className="h-2 w-2 opacity-0 group-hover/badge:opacity-100 transition-opacity hover:text-destructive cursor-pointer" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleItem(item.id);
-                    }}
-                  />
-                </Badge>
-              ))}
-            </div>
-        )}
-
-        {/* 2. Popover Trigger Layer (Fill Space) */}
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <div 
-                    className="w-full h-full flex items-center px-2 hover:bg-muted/50 cursor-pointer"
-                    onContextMenu={(e) => {
-                        if (onEmptyContextMenu) {
-                             // Only trigger if we are NOT clicking on a badge (badges stop propagation, but just in case)
-                             onEmptyContextMenu(e);
-                        }
-                    }}
-                >
-                    {/* Placeholder if empty */}
-                    {values.length === 0 && (
-                        <div className="flex items-center gap-2 text-muted-foreground/50 text-sm pointer-events-none">
-                            <Icon className="h-3.5 w-3.5 opacity-50" />
-                            <span>{placeholder}</span>
-                        </div>
-                    )}
-                    
-                    {/* Plus Icon on Hover (if not empty) */}
-                    {values.length > 0 && (
-                        <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <Plus className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                    )}
-                </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0 z-[60]" align="start" sideOffset={5} alignOffset={-10}>
-                <Command>
-                <CommandInput placeholder="Search..." className="h-8 text-xs" />
-                <CommandList>
-                    <CommandEmpty>No results.</CommandEmpty>
-                    <CommandGroup>
-                    {options.map((option) => (
-                        <CommandItem
-                        key={option.id}
-                        value={option.name}
-                        onSelect={() => toggleItem(option.id)}
-                        className="text-xs"
-                        >
-                        <Check className={cn("mr-2 h-3 w-3", values.includes(option.id) ? "opacity-100" : "opacity-0")} />
-                        {option.name}
-                        </CommandItem>
-                    ))}
-                    </CommandGroup>
-                </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    </div>
-  );
-};
+import { DraggableResource } from "@/components/paper-lineup/DraggableResource";
+import { DroppableCell } from "@/components/paper-lineup/DroppableCell";
+import { MultiResourceSelect } from "@/components/paper-lineup/MultiResourceSelect";
+import { DraggableData, ResourceType } from "@/components/paper-lineup/types";
 
 const EditableText = ({ value, onChange, className, onContextMenu }: { value: string, onChange: (val: string) => void, className?: string, onContextMenu?: (e: React.MouseEvent) => void }) => {
   const [isEditing, setIsEditing] = useState(false);

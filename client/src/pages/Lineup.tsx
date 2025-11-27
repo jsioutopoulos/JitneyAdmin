@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Header } from "@/components/layout/Header";
 import { trips, vehicles, crew, Trip } from "@/lib/mockData";
@@ -30,11 +30,13 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, ArrowRight, Bus, Check, Clock, Info, Layers, MoreHorizontal, UserPlus, Users } from "lucide-react";
 
+type TripAssignmentHandler = <K extends keyof Trip>(tripId: string, field: K, value: Trip[K]) => void;
+
 export default function Lineup() {
   const [localTrips, setLocalTrips] = useState<Trip[]>(trips);
 
-  const handleAssign = (tripId: string, field: keyof Trip, value: string) => {
-    setLocalTrips(prev => prev.map(t => 
+  const handleAssign: TripAssignmentHandler = (tripId, field, value) => {
+    setLocalTrips(prev => prev.map(t =>
       t.id === tripId ? { ...t, [field]: value } : t
     ));
   };
@@ -95,12 +97,12 @@ export default function Lineup() {
   );
 }
 
-function LineupRow({ trip, onAssign }: { trip: Trip, onAssign: (id: string, field: any, value: string) => void }) {
+function LineupRow({ trip, onAssign }: { trip: Trip; onAssign: TripAssignmentHandler }) {
   const vehicle = vehicles.find(v => v.id === trip.vehicleId);
-  const driver = crew.find(c => c.id === (trip.driverIds?.[0] || trip.driverId));
-  const attendant = crew.find(c => c.id === (trip.attendantIds?.[0] || trip.attendantId));
-  
-  const isUnassigned = !trip.vehicleId || !(trip.driverIds?.length > 0 || trip.driverId);
+  const driver = crew.find(c => c.id === trip.driverIds?.[0]);
+  const attendant = crew.find(c => c.id === trip.attendantIds?.[0]);
+
+  const isUnassigned = !trip.vehicleId || !(trip.driverIds?.length > 0);
   
   return (
     <TableRow className={cn(
@@ -150,8 +152,8 @@ function LineupRow({ trip, onAssign }: { trip: Trip, onAssign: (id: string, fiel
 
       {/* Vehicle Selector */}
       <TableCell className="align-top py-3">
-        <ResourceSelect 
-          value={trip.vehicleId} 
+        <ResourceSelect
+          value={trip.vehicleId ?? ""}
           options={vehicles}
           placeholder="Select Bus..."
           icon={Bus}
@@ -216,8 +218,22 @@ function LineupRow({ trip, onAssign }: { trip: Trip, onAssign: (id: string, fiel
 
 // Helper Components
 
-function ResourceSelect({ value, options, placeholder, icon: Icon, onChange, type }: any) {
-  const selected = options.find((o: any) => o.id === value);
+type ResourceOption = {
+  id: string;
+  name: string;
+  status?: string;
+  type?: string;
+};
+
+function ResourceSelect<T extends ResourceOption>({ value, options, placeholder, icon: Icon, onChange, type }: {
+  value: string;
+  options: T[];
+  placeholder: string;
+  icon: ComponentType<{ className?: string }>;
+  onChange: (value: string) => void;
+  type: "vehicle" | "crew";
+}) {
+  const selected = options.find((o) => o.id === value);
   
   return (
     <Select value={value || ""} onValueChange={onChange}>
@@ -233,8 +249,8 @@ function ResourceSelect({ value, options, placeholder, icon: Icon, onChange, typ
           </span>
         </div>
       </SelectTrigger>
-      <SelectContent>
-        {options.map((opt: any) => (
+        <SelectContent>
+          {options.map((opt: T) => (
           <SelectItem key={opt.id} value={opt.id} className="text-xs">
              <div className="flex items-center justify-between w-full gap-4">
                <span>{opt.name}</span>
