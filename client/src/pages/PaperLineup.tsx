@@ -21,11 +21,352 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import mapBg from "@assets/generated_images/subtle_topological_map_background.png";
 import { DraggableResource } from "@/components/paper-lineup/DraggableResource";
+import { DroppableCell } from "@/components/paper-lineup/DroppableCell";
+import { MultiResourceSelect } from "@/components/paper-lineup/MultiResourceSelect";
 import { DraggableData, ResourceType } from "@/components/paper-lineup/types";
-import { DigitalLineupView } from "@/components/paper-lineup/DigitalLineupView";
-import { PaperLineupView } from "@/components/paper-lineup/PaperLineupView";
-import { PaperLineupDrawer, DrawerContent } from "@/components/paper-lineup/PaperLineupDrawer";
+
+const EditableText = ({ value, onChange, className, onContextMenu }: { value: string, onChange: (val: string) => void, className?: string, onContextMenu?: (e: React.MouseEvent) => void }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempValue, setTempValue] = useState(value);
+
+  if (isEditing) {
+    return (
+      <Input 
+        value={tempValue}
+        onChange={(e) => setTempValue(e.target.value)}
+        onBlur={() => { setIsEditing(false); onChange(tempValue); }}
+        onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditing(false); onChange(tempValue); } }}
+        className={cn("h-full w-full border-none shadow-none focus-visible:ring-0 px-1 py-0 bg-background font-bold text-primary rounded-none", className)}
+        autoFocus
+      />
+    );
+  }
+
+  return (
+    <div 
+      onClick={() => { setTempValue(value); setIsEditing(true); }}
+      onContextMenu={onContextMenu}
+      className={cn("w-full h-full flex items-center justify-center cursor-text hover:bg-muted/20", className)}
+    >
+      {value}
+    </div>
+  );
+};
+
+// Clean trip ID helper
+const getCleanTripId = (id: string): string => {
+  // Remove common suffixes and clean up
+  return id.replace(/sg|trans|\/|\+|\s+/gi, '').replace(/[^0-9]/g, '');
+};
+
+const DigitalGridView = ({ trips, onAction }: { trips: Trip[], onAction: (type: ResourceType, id: string) => void }) => {
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [filter, setFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Flatten trips into individual card items
+  const cardItems = trips.flatMap(t => {
+    if (t.legs && t.legs.length > 0) {
+      return t.legs.map(l => ({
+        id: getCleanTripId(l.id) || l.id, // Use clean ID or fallback
+        rawId: l.id,
+        status: l.status,
+        direction: l.direction,
+        parent: t
+      }));
+    }
+    return [{
+      id: getCleanTripId(t.packId || t.id) || t.id,
+      rawId: t.packId || t.id,
+      status: t.status,
+      direction: t.direction,
+      parent: t
+    }];
+  });
+
+  // Helper to get display status (Open/Closed/Cancelled)
+  const getDisplayStatus = (status: string) => {
+      if (status === 'cancelled') return 'Cancelled';
+      if (status === 'completed') return 'Closed';
+      return 'Open';
+  };
+
+  // Filter items
+  const filteredItems = cardItems.filter(item => {
+    const matchesSearch = 
+        item.id.toLowerCase().includes(filter.toLowerCase()) ||
+        item.parent.route.toLowerCase().includes(filter.toLowerCase()) ||
+        item.rawId.toLowerCase().includes(filter.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || getDisplayStatus(item.status).toLowerCase() === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Helper to determine line brand
+  const getLineBrand = (trip: Trip, vehicleId: string | null) => {
+    // Determine Brand
+    let brand = 'Jitney';
+    let brandColor = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Default Jitney Green
+    
+    // Determine Line
+    let line = 'Montauk'; // Default
+    let lineColor = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Default Green
+
+    const r = trip.route.toLowerCase();
+
+    // Check vehicle type first if assigned
+    if (vehicleId) {
+        const v = vehicles.find(v => v.id === vehicleId);
+        if (v && v.type === 'Ambassador') {
+            brand = 'Ambassador';
+            brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
+            line = 'Ambassador';
+            lineColor = 'bg-blue-100 text-blue-800 border-blue-200';
+        }
+    } 
+    // Fallback to route heuristics
+    else if (r.includes('ambassador')) {
+        brand = 'Ambassador';
+        brandColor = 'bg-blue-100 text-blue-800 border-blue-200';
+        line = 'Ambassador';
+        lineColor = 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+
+    // If not Ambassador, determine line by route
+    if (brand !== 'Ambassador') {
+        if (r.includes('westhampton')) {
+            line = 'Westhampton';
+            lineColor = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        } else if (r.includes('north fork') || r.includes('greenport')) {
+            line = 'North Fork';
+            lineColor = 'bg-purple-100 text-purple-800 border-purple-200';
+        }
+    }
+    
+    return { brand, brandColor, line, lineColor };
+  };
+
+  return (
+    <div className="h-full overflow-hidden flex flex-col bg-muted/10">
+      {/* Toolbar */}
+      <div className="bg-background border-b p-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+            <div className="relative max-w-sm w-full">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search trips..." 
+                    className="pl-8 h-9" 
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                />
+            </div>
+            <div className="flex items-center bg-muted/50 rounded-lg p-1">
+                {['all', 'open', 'closed', 'cancelled'].map(status => (
+                    <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={cn(
+                            "px-3 py-1 text-xs font-medium rounded-md capitalize transition-all",
+                            statusFilter === status ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        {status}
+                    </button>
+                ))}
+            </div>
+        </div>
+        
+        <div className="flex items-center bg-muted/50 rounded-lg p-1">
+            <button
+                onClick={() => setView('grid')}
+                className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    view === 'grid' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+                onClick={() => setView('list')}
+                className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    view === 'list' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                <List className="h-4 w-4" />
+            </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4 pb-32">
+        {view === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredItems.map((item, idx) => {
+                    const { brand, brandColor, line, lineColor } = getLineBrand(item.parent, item.parent.vehicleId);
+                    return (
+                    <Card key={`${item.parent.id}-${item.id}-${idx}`} className="group flex flex-col p-3 gap-3 hover:shadow-md transition-all border-border/60 hover:border-primary/20">
+                        {/* Brand & Line Header */}
+                        <div className="flex items-center justify-between pb-2 border-b border-border/50 border-dashed">
+                            <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider border", brandColor)}>
+                                {brand}
+                            </Badge>
+                            <Badge variant="outline" className={cn("text-[9px] h-4 px-1.5 font-medium uppercase tracking-wide border", lineColor)}>
+                                {line}
+                            </Badge>
+                        </div>
+
+                        <div className="flex items-start justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-2xl font-bold font-mono tracking-tighter text-primary leading-none">
+                                    {item.id}
+                                </span>
+                                <Badge variant="outline" className={cn(
+                                    "w-fit mt-1 text-[9px] font-bold uppercase h-4 px-1 border",
+                                    getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                    getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
+                                    getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
+                                )}>
+                                    {getDisplayStatus(item.status)}
+                                </Badge>
+                            </div>
+                            <div className="text-right">
+                                <span className="font-mono font-medium text-sm block">
+                                    {format(item.parent.departureTime, "HH:mm")}
+                                </span>
+                                <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Dep</span>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 min-h-[40px]">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 px-1.5 py-0.5 rounded">
+                                    {item.direction}
+                                </span>
+                                {item.parent.hasAda && <Accessibility className="h-3 w-3 text-blue-500" />}
+                            </div>
+                            <div className="text-xs font-semibold line-clamp-2 text-foreground/90" title={item.parent.route}>
+                                {item.parent.route}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                             <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-xs font-mono text-muted-foreground">
+                                    {item.parent.reservedCount}/{item.parent.capacity}
+                                </span>
+                             </div>
+                             
+                             <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAction('trip', item.parent.id)}>
+                                    <List className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAction('seats', item.parent.id)}>
+                                    <LayoutGrid className="h-3 w-3" />
+                                </Button>
+                             </div>
+                        </div>
+                    </Card>
+                    );
+                })}
+            </div>
+        ) : (
+            <div className="bg-card rounded-md border shadow-sm overflow-hidden">
+                <Table>
+                    <TableHeader className="bg-muted/50">
+                        <TableRow>
+                            <TableHead className="w-[80px]">Brand</TableHead>
+                            <TableHead className="w-[100px]">Trip ID</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
+                            <TableHead className="w-[100px]">Time</TableHead>
+                            <TableHead>Route</TableHead>
+                            <TableHead className="w-[100px]">Capacity</TableHead>
+                            <TableHead className="w-[150px]">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredItems.map((item, idx) => {
+                            const { brand, brandColor, line, lineColor } = getLineBrand(item.parent, item.parent.vehicleId);
+                            return (
+                            <TableRow key={`${item.parent.id}-${item.id}-${idx}`} className="group hover:bg-muted/5">
+                                <TableCell>
+                                    <div className="flex flex-col gap-1 items-start">
+                                        <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-bold uppercase tracking-wider border", brandColor)}>
+                                            {brand}
+                                        </Badge>
+                                        <Badge variant="outline" className={cn("w-fit text-[9px] h-4 px-1 font-medium uppercase tracking-wide border", lineColor)}>
+                                            {line}
+                                        </Badge>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                    <span className="font-mono text-base font-bold text-primary">{item.id}</span>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant="outline" className={cn(
+                                        "w-fit text-[10px] font-bold uppercase h-5 px-1.5 border",
+                                        getDisplayStatus(item.status) === 'Open' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                        getDisplayStatus(item.status) === 'Closed' && "bg-gray-100 text-gray-600 border-gray-200",
+                                        getDisplayStatus(item.status) === 'Cancelled' && "bg-red-50 text-red-700 border-red-200"
+                                    )}>
+                                        {getDisplayStatus(item.status)}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                    {format(item.parent.departureTime, "HH:mm")}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-medium truncate max-w-[200px]">{item.parent.route}</span>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[9px] text-muted-foreground uppercase">{item.direction}</span>
+                                            {item.parent.hasAda && <Accessibility className="h-3 w-3 text-blue-500" />}
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Users className="h-3.5 w-3.5" />
+                                        {item.parent.reservedCount}/{item.parent.capacity}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => onAction('trip', item.parent.id)}>Manifest</Button>
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => onAction('stops', item.parent.id)}>Stops</Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 // --- Main Component ---
 
 export default function HybridLineup() {
